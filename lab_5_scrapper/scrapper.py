@@ -1,32 +1,79 @@
 """
 Crawler implementation
 """
+from core_utils.constants import CRAWLER_CONFIG_PATH
+from core_utils.config_dto import ConfigDTO
+from pathlib import Path
 from typing import Pattern, Union
+import json
+import requests
 
 
+class IncorrectSeedURLError(Exception):
+    pass
+
+class NumberOfArticlesOutOfRangeError(Exception):
+    pass
+
+class IncorrectNumberOfArticlesError(Exception):
+    pass
+class IncorrectHeadersError(Exception):
+    pass
+
+class IncorrectEncodingError(Exception):
+    pass
+
+class IncorrectTimeoutError(Exception):
+    pass
+
+class IncorrectVerifyError(Exception):
+    pass
+cdrsre
 class Config:
     """
     Unpacks and validates configurations
     """
 
+    seed_urls: list[str]
+    total_articles_to_find_and_parse: int
+    headers: dict[str, str]
+    encoding: str
+    timeout: int
+    verify_certificate: bool
+    headless_mode: bool
+
     def __init__(self, path_to_config: Path) -> None:
         """
         Initializes an instance of the Config class
         """
-        pass
+        self.path_to_config = CRAWLER_CONFIG_PATH
 
     def _extract_config_content(self) -> ConfigDTO:
         """
         Returns config values
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+
+            config = ConfigDTO(seed_urls=config_params['seed_urls'],
+                               headers=config_params['headers'],
+                               total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
+                               encoding=config_params['encoding'],
+                               timeout=config_params['timeout'],
+                               should_verify_certificate=config_params['should_verify_certificate'],
+                               headless_mode=config_params['headless_mode']
+                               )
+            return config
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters
         are not corrupt
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+            if config_params['seed_urls'] not in range(1, 151):
+                raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://w?w?w?." or does not correspond to the target website')
 
     def get_seed_urls(self) -> list[str]:
         """
@@ -158,6 +205,7 @@ def main() -> None:
     """
     Entrypoint for scrapper module
     """
+    # YOUR CODE GOES HERE
     pass
 
 
