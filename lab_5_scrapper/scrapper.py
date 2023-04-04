@@ -1,14 +1,15 @@
 """
 Crawler implementation
 """
-from bs4 import BeautifulSoup
-from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
 from core_utils.config_dto import ConfigDTO
+import requests
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 from pathlib import Path
 from typing import Pattern, Union
 import json
 import re
-import requests
+from bs4 import BeautifulSoup
 
 
 class IncorrectSeedURLError(Exception):
@@ -69,10 +70,12 @@ class Config:
 
             config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
                                    headers=config_params['headers'],
-                                   total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
+                                   total_articles_to_find_and_parse=
+                                   config_params['total_articles_to_find_and_parse'],
                                    encoding=config_params['encoding'],
                                    timeout=config_params['timeout'],
-                                   should_verify_certificate=config_params['should_verify_certificate'],
+                                   should_verify_certificate=
+                                   config_params['should_verify_certificate'],
                                    headless_mode=config_params['headless_mode']
                                    )
             return config_dto
@@ -82,26 +85,36 @@ class Config:
         Ensure configuration parameters
         are not corrupt
         """
-        if not all(re.match('https?://w?w?w?.', link) for link in self.get_seed_urls()):
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+
+        seed_urls = config_params['seed_urls']
+        total_articles = config_params['total_articles_to_find_and_parse']
+        headers = config_params['headers']
+        encoding = config_params['encoding']
+        timeout = config_params['timeout']
+        verify_cert = config_params['should_verify_certificate']
+
+        if not all(re.match('https?://w?w?w?.', url) for url in seed_urls):
             raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://w?w?w?." \
                                             or does not correspond to the target website')
 
-        if self.get_num_articles() not in range(1, 151):
+        if total_articles not in range(1, 151):
             raise NumberOfArticlesOutOfRangeError('total number of articles is out of range from 1 to 150')
 
-        if not isinstance(self.get_num_articles(), int) or isinstance(self.get_num_articles(), bool):
+        if not isinstance(total_articles, int) or isinstance(total_articles, bool):
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
 
-        if not isinstance(self.get_headers(), dict):
+        if not isinstance(headers, dict):
             raise IncorrectHeadersError('headers are not in a form of dictionary')
 
-        if not isinstance(self.get_encoding(), str):
+        if not isinstance(encoding, str):
             raise IncorrectEncodingError('encoding must be specified as a string')
 
-        if not self.get_timeout() in range(1, 60):
+        if timeout not in range(1, 60):
             raise IncorrectTimeoutError('timeout value must be a positive integer less than 60')
 
-        if not isinstance(self.get_verify_certificate(), bool):
+        if not isinstance(verify_cert, bool):
             raise IncorrectVerifyError('verify certificate value must either be True or False')
 
     def get_seed_urls(self) -> list[str]:
@@ -110,7 +123,7 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
-        return config_params['seed_urls']
+        return list(config_params['seed_urls'])
 
     def get_num_articles(self) -> int:
         """
@@ -242,7 +255,6 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
     ASSETS_PATH.mkdir(exist_ok=True)
-
 
 
 def main() -> None:
