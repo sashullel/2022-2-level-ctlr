@@ -1,34 +1,44 @@
 """
 Crawler implementation
 """
-from core_utils.constants import CRAWLER_CONFIG_PATH
+from bs4 import BeautifulSoup
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 from core_utils.config_dto import ConfigDTO
 from pathlib import Path
 from typing import Pattern, Union
 import json
+import re
 import requests
 
 
 class IncorrectSeedURLError(Exception):
     pass
 
+
 class NumberOfArticlesOutOfRangeError(Exception):
     pass
 
+
 class IncorrectNumberOfArticlesError(Exception):
     pass
+
+
 class IncorrectHeadersError(Exception):
     pass
+
 
 class IncorrectEncodingError(Exception):
     pass
 
+
 class IncorrectTimeoutError(Exception):
     pass
 
+
 class IncorrectVerifyError(Exception):
     pass
-cdrsre
+
+
 class Config:
     """
     Unpacks and validates configurations
@@ -46,7 +56,9 @@ class Config:
         """
         Initializes an instance of the Config class
         """
-        self.path_to_config = CRAWLER_CONFIG_PATH
+        self.path_to_config = path_to_config
+        self._validate_config_content()
+        self._extract_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -55,67 +67,98 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
 
-            config = ConfigDTO(seed_urls=config_params['seed_urls'],
-                               headers=config_params['headers'],
-                               total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
-                               encoding=config_params['encoding'],
-                               timeout=config_params['timeout'],
-                               should_verify_certificate=config_params['should_verify_certificate'],
-                               headless_mode=config_params['headless_mode']
-                               )
-            return config
+            config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
+                                   headers=config_params['headers'],
+                                   total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
+                                   encoding=config_params['encoding'],
+                                   timeout=config_params['timeout'],
+                                   should_verify_certificate=config_params['should_verify_certificate'],
+                                   headless_mode=config_params['headless_mode']
+                                   )
+            return config_dto
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters
         are not corrupt
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-            if config_params['seed_urls'] not in range(1, 151):
-                raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://w?w?w?." or does not correspond to the target website')
+        if not all(re.match('https?://w?w?w?.', link) for link in self.get_seed_urls()):
+            raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://w?w?w?." \
+                                            or does not correspond to the target website')
+
+        if self.get_num_articles() not in range(1, 151):
+            raise NumberOfArticlesOutOfRangeError('total number of articles is out of range from 1 to 150')
+
+        if not isinstance(self.get_num_articles(), int) or isinstance(self.get_num_articles(), bool):
+            raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
+
+        if not isinstance(self.get_headers(), dict):
+            raise IncorrectHeadersError('headers are not in a form of dictionary')
+
+        if not isinstance(self.get_encoding(), str):
+            raise IncorrectEncodingError('encoding must be specified as a string')
+
+        if not self.get_timeout() in range(1, 60):
+            raise IncorrectTimeoutError('timeout value must be a positive integer less than 60')
+
+        if not isinstance(self.get_verify_certificate(), bool):
+            raise IncorrectVerifyError('verify certificate value must either be True or False')
 
     def get_seed_urls(self) -> list[str]:
         """
         Retrieve seed urls
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['seed_urls']
 
     def get_num_articles(self) -> int:
         """
         Retrieve total number of articles to scrape
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['total_articles_to_find_and_parse']
 
     def get_headers(self) -> dict[str, str]:
         """
         Retrieve headers to use during requesting
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['headers']
 
     def get_encoding(self) -> str:
         """
         Retrieve encoding to use during parsing
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['encoding']
 
     def get_timeout(self) -> int:
         """
         Retrieve number of seconds to wait for response
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['timeout']
 
     def get_verify_certificate(self) -> bool:
         """
         Retrieve whether to verify certificate
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['should_verify_certificate']
 
     def get_headless_mode(self) -> bool:
         """
         Retrieve whether to use headless mode
         """
-        pass
+        with open(self.path_to_config, 'r', encoding='utf-8') as f:
+            config_params = json.load(f)
+        return config_params['headless_mode']
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -198,15 +241,15 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    pass
+    ASSETS_PATH.mkdir(exist_ok=True)
+
 
 
 def main() -> None:
     """
     Entrypoint for scrapper module
     """
-    # YOUR CODE GOES HERE
-    pass
+    configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
 
 
 if __name__ == "__main__":
