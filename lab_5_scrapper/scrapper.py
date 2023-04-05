@@ -9,6 +9,7 @@ import re
 import json
 from bs4 import BeautifulSoup
 import requests
+from requests import HTTPError
 
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
@@ -72,10 +73,12 @@ class Config:
 
             config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
                                    headers=config_params['headers'],
-                                   total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
+                                   total_articles_to_find_and_parse=
+                                   config_params['total_articles_to_find_and_parse'],
                                    encoding=config_params['encoding'],
                                    timeout=config_params['timeout'],
-                                   should_verify_certificate=config_params['should_verify_certificate'],
+                                   should_verify_certificate=
+                                   config_params['should_verify_certificate'],
                                    headless_mode=config_params['headless_mode']
                                    )
             return config_dto
@@ -95,7 +98,7 @@ class Config:
         timeout = config_params['timeout']
         verify_cert = config_params['should_verify_certificate']
 
-        if not all(re.match('https?://w?w?w?.', url) for url in seed_urls):
+        if not all(re.match('https?://w?w?w?.zebra-tv.ru/', url) for url in seed_urls):
             raise IncorrectSeedURLError('seed URL does not match the standard pattern \
                                         or does not correspond to the target website')
 
@@ -189,8 +192,8 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     with given configuration
     """
     response = requests.get(url, headers=config.get_headers(), timeout=config.get_timeout())
-    if response.status_code == 200:
-        return response
+    response.raise_for_status()
+    return response
 
 
 class Crawler:
@@ -204,25 +207,39 @@ class Crawler:
         """
         Initializes an instance of the Crawler class
         """
-        pass
+        self.config = config
+        self.urls = []
 
     def _extract_url(self, article_bs: BeautifulSoup) -> str:
         """
         Finds and retrieves URL from HTML
         """
-        pass
+        links = article_bs.find_all('a')
+        for link in links:
+            url = link['href']
+            if url.count('/') == 4 and url[0] == '/':
+                url = 'https://www.zebra-tv.ru' + url
+                return url
 
     def find_articles(self) -> None:
         """
         Finds articles
         """
-        pass
+        for url in self.config.get_seed_urls():
+            try:
+                response = make_request(url, config=self.config)
+                soup = BeautifulSoup(response.text, 'lxml')
+                new_url = self._extract_url(soup)
+                if new_url not in self.urls:
+                    self.urls.append(new_url)
+            except HTTPError:
+                continue
 
     def get_search_urls(self) -> list:
         """
         Returns seed_urls param
         """
-        pass
+        return self.config.get_seed_urls()
 
 
 class HTMLParser:
@@ -275,6 +292,8 @@ def main() -> None:
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
     if configuration:
         prepare_environment(ASSETS_PATH)
+        crawler = Crawler(config=configuration)
+        crawler.find_articles()
 
 
 if __name__ == "__main__":
