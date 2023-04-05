@@ -2,14 +2,17 @@
 Crawler implementation
 """
 
-from core_utils.config_dto import ConfigDTO
-import requests
-from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 from pathlib import Path
 from typing import Pattern, Union
-import json
-import re
 from bs4 import BeautifulSoup
+
+import re
+import requests
+
+from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+
+import json
 
 
 class IncorrectSeedURLError(Exception):
@@ -96,11 +99,12 @@ class Config:
         verify_cert = config_params['should_verify_certificate']
 
         if not all(re.match('https?://w?w?w?.', url) for url in seed_urls):
-            raise IncorrectSeedURLError('seed URL does not match standard pattern "https?://w?w?w?." \
-                                            or does not correspond to the target website')
+            raise IncorrectSeedURLError('seed URL does not match the standard pattern \
+                                        or does not correspond to the target website')
 
         if total_articles not in range(1, 151):
-            raise NumberOfArticlesOutOfRangeError('total number of articles is out of range from 1 to 150')
+            raise NumberOfArticlesOutOfRangeError('total number of articles is \
+                                                  out of range from 1 to 150')
 
         if not isinstance(total_articles, int) or isinstance(total_articles, bool):
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
@@ -123,7 +127,7 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
-        return list(config_params['seed_urls'])
+        return config_params['seed_urls']
 
     def get_num_articles(self) -> int:
         """
@@ -179,7 +183,8 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    pass
+    response = requests.get(url, headers=config.get_headers(), timeout=config.get_timeout())
+    return response
 
 
 class Crawler:
@@ -254,7 +259,7 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    ASSETS_PATH.mkdir(exist_ok=True)
+    base_path.mkdir(exist_ok=True)
 
 
 def main() -> None:
@@ -262,6 +267,8 @@ def main() -> None:
     Entrypoint for scrapper module
     """
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
+    if configuration:
+        prepare_environment(ASSETS_PATH)
 
 
 if __name__ == "__main__":
