@@ -126,9 +126,9 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             seed_urls = json.load(f)['seed_urls']
 
-            if isinstance(seed_urls, list) and \
-                    all(isinstance(url, str) for url in seed_urls):
-                return seed_urls
+        if isinstance(seed_urls, list) and \
+                all(isinstance(url, str) for url in seed_urls):
+            return seed_urls
 
     def get_num_articles(self) -> int:
         """
@@ -137,48 +137,60 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             total_articles = json.load(f)['total_articles_to_find_and_parse']
 
-            if isinstance(total_articles, int) and not isinstance(total_articles, bool):
-                return total_articles
+        if isinstance(total_articles, int) and not isinstance(total_articles, bool):
+            return total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
         Retrieve headers to use during requesting
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['headers']
+            headers = json.load(f)['headers']
+
+        if isinstance(headers, dict):
+            for key, val in headers.items():
+                if isinstance(key, str) and isinstance(val, str):
+                    return headers
 
     def get_encoding(self) -> str:
         """
         Retrieve encoding to use during parsing
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['encoding']
+            encoding = json.load(f)['encoding']
+
+        if isinstance(encoding, str):
+            return encoding
 
     def get_timeout(self) -> int:
         """
         Retrieve number of seconds to wait for response
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['timeout']
+            timeout = json.load(f)['timeout']
+
+        if isinstance(timeout, int) and not isinstance(timeout, bool):
+            return timeout
 
     def get_verify_certificate(self) -> bool:
         """
         Retrieve whether to verify certificate
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['should_verify_certificate']
+            if_verify = json.load(f)['should_verify_certificate']
+
+        if isinstance(if_verify, bool):
+            return if_verify
 
     def get_headless_mode(self) -> bool:
         """
         Retrieve whether to use headless mode
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['headless_mode']
+            if_headless = json.load(f)['headless_mode']
+
+        if isinstance(if_headless, bool):
+            return if_headless
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
