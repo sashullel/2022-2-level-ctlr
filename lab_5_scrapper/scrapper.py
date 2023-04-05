@@ -4,15 +4,15 @@ Crawler implementation
 
 from pathlib import Path
 from typing import Pattern, Union
-from bs4 import BeautifulSoup
 
 import re
+import json
+from bs4 import BeautifulSoup
+
 import requests
 
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
-
-import json
 
 
 class IncorrectSeedURLError(Exception):
@@ -73,12 +73,10 @@ class Config:
 
             config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
                                    headers=config_params['headers'],
-                                   total_articles_to_find_and_parse=
-                                   config_params['total_articles_to_find_and_parse'],
+                                   total_articles_to_find_and_parse=config_params['total_articles_to_find_and_parse'],
                                    encoding=config_params['encoding'],
                                    timeout=config_params['timeout'],
-                                   should_verify_certificate=
-                                   config_params['should_verify_certificate'],
+                                   should_verify_certificate=config_params['should_verify_certificate'],
                                    headless_mode=config_params['headless_mode']
                                    )
             return config_dto
@@ -126,16 +124,21 @@ class Config:
         Retrieve seed urls
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['seed_urls']
+            seed_urls = json.load(f)['seed_urls']
+
+            if isinstance(seed_urls, list) and \
+                    all(isinstance(url, str) for url in seed_urls):
+                return seed_urls
 
     def get_num_articles(self) -> int:
         """
         Retrieve total number of articles to scrape
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
-        return config_params['total_articles_to_find_and_parse']
+            total_articles = json.load(f)['total_articles_to_find_and_parse']
+
+            if isinstance(total_articles, int) and not isinstance(total_articles, bool):
+                return total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -184,7 +187,8 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     with given configuration
     """
     response = requests.get(url, headers=config.get_headers(), timeout=config.get_timeout())
-    return response
+    if response.status_code == 200:
+        return response
 
 
 class Crawler:
