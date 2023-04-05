@@ -8,7 +8,6 @@ from typing import Pattern, Union
 import re
 import json
 from bs4 import BeautifulSoup
-
 import requests
 
 from core_utils.config_dto import ConfigDTO
@@ -126,9 +125,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             seed_urls = json.load(f)['seed_urls']
 
-        if isinstance(seed_urls, list) and \
-                all(isinstance(url, str) for url in seed_urls):
-            return seed_urls
+        return list(str(url) for url in seed_urls)
 
     def get_num_articles(self) -> int:
         """
@@ -137,8 +134,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             total_articles = json.load(f)['total_articles_to_find_and_parse']
 
-        if isinstance(total_articles, int) and not isinstance(total_articles, bool):
-            return total_articles
+        return int(total_articles)
 
     def get_headers(self) -> dict[str, str]:
         """
@@ -147,10 +143,8 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             headers = json.load(f)['headers']
 
-        if isinstance(headers, dict):
-            for key, val in headers.items():
-                if isinstance(key, str) and isinstance(val, str):
-                    return headers
+        pairs = [(str(key), str(val)) for key, val in headers.items()]
+        return dict(pairs)
 
     def get_encoding(self) -> str:
         """
@@ -159,8 +153,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             encoding = json.load(f)['encoding']
 
-        if isinstance(encoding, str):
-            return encoding
+        return str(encoding)
 
     def get_timeout(self) -> int:
         """
@@ -169,8 +162,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             timeout = json.load(f)['timeout']
 
-        if isinstance(timeout, int) and not isinstance(timeout, bool):
-            return timeout
+        return int(timeout)
 
     def get_verify_certificate(self) -> bool:
         """
@@ -179,8 +171,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             if_verify = json.load(f)['should_verify_certificate']
 
-        if isinstance(if_verify, bool):
-            return if_verify
+        return bool(if_verify)
 
     def get_headless_mode(self) -> bool:
         """
@@ -189,8 +180,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             if_headless = json.load(f)['headless_mode']
 
-        if isinstance(if_headless, bool):
-            return if_headless
+        return bool(if_headless)
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
