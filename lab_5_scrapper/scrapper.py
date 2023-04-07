@@ -9,10 +9,17 @@ import re
 import json
 from bs4 import BeautifulSoup
 import requests
+from datetime import datetime
+from selenium import webdriver
 from requests import HTTPError
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+import time
+
 
 from core_utils.config_dto import ConfigDTO
-from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
+from core_utils.constants import (ASSETS_PATH, CRAWLER_CONFIG_PATH,
+                                  NUM_ARTICLES_UPPER_LIMIT, TIMEOUT_LOWER_LIMIT,
+                                  TIMEOUT_UPPER_LIMIT)
 
 
 class IncorrectSeedURLError(Exception):
@@ -62,7 +69,6 @@ class Config:
         """
         self.path_to_config = path_to_config
         self._validate_config_content()
-        self._extract_config_content()
 
     def _extract_config_content(self) -> ConfigDTO:
         """
@@ -71,119 +77,89 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
 
-            config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
+            self.config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
                                    headers=config_params['headers'],
                                    total_articles_to_find_and_parse=
-                                   config_params['total_articles_to_find_and_parse'],
+                                        config_params['total_articles_to_find_and_parse'],
                                    encoding=config_params['encoding'],
                                    timeout=config_params['timeout'],
                                    should_verify_certificate=
-                                   config_params['should_verify_certificate'],
-                                   headless_mode=config_params['headless_mode']
-                                   )
-            return config_dto
+                                        config_params['should_verify_certificate'],
+                                   headless_mode=config_params['headless_mode'])
+
+            return self.config_dto
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters
         are not corrupt
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            config_params = json.load(f)
+        config_dto = self._extract_config_content()
 
-        seed_urls = config_params['seed_urls']
-        total_articles = config_params['total_articles_to_find_and_parse']
-        headers = config_params['headers']
-        encoding = config_params['encoding']
-        timeout = config_params['timeout']
-        verify_cert = config_params['should_verify_certificate']
+        if not all(re.match('https?://w?w?w?zebra-tv.ru/', url) for url in config_dto.seed_urls):
+            raise IncorrectSeedURLError('seed URL does not match the standard pattern '
+                                        'or does not correspond to the target website')
 
-        if not all(re.match('https?://w?w?w?.zebra-tv.ru/', url) for url in seed_urls):
-            raise IncorrectSeedURLError('seed URL does not match the standard pattern \
-                                        or does not correspond to the target website')
+        if config_dto.total_articles not in range(1, NUM_ARTICLES_UPPER_LIMIT):
+            raise NumberOfArticlesOutOfRangeError('total number of articles is '
+                                                  'out of the given range')
 
-        if total_articles not in range(1, 151):
-            raise NumberOfArticlesOutOfRangeError('total number of articles is \
-                                                  out of range from 1 to 150')
-
-        if not isinstance(total_articles, int) or isinstance(total_articles, bool):
+        if not isinstance(config_dto.total_articles, int) or isinstance(config_dto.total_articles, bool):
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
 
-        if not isinstance(headers, dict):
-            raise IncorrectHeadersError('headers are not in a form of dictionary')
+        if not isinstance(config_dto.headers, dict):
+            raise IncorrectHeadersError('headers are not in a form of a dictionary')
 
-        if not isinstance(encoding, str):
+        if not isinstance(config_dto.encoding, str):
             raise IncorrectEncodingError('encoding must be specified as a string')
 
-        if timeout not in range(1, 60):
-            raise IncorrectTimeoutError('timeout value must be a positive integer less than 60')
+        if config_dto.timeout not in range(TIMEOUT_LOWER_LIMIT, TIMEOUT_UPPER_LIMIT + 1):
+            raise IncorrectTimeoutError('timeout value must be a positive integer less than the given value')
 
-        if not isinstance(verify_cert, bool):
+        if not isinstance(config_dto.should_verify_certificate, bool):
             raise IncorrectVerifyError('verify certificate value must either be True or False')
 
     def get_seed_urls(self) -> list[str]:
         """
         Retrieve seed urls
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            seed_urls = json.load(f)['seed_urls']
-
-        return list(str(url) for url in seed_urls)
+        return self.config_dto.seed_urls
 
     def get_num_articles(self) -> int:
         """
         Retrieve total number of articles to scrape
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            total_articles = json.load(f)['total_articles_to_find_and_parse']
-
-        return int(total_articles)
+        return self.config_dto.total_articles
 
     def get_headers(self) -> dict[str, str]:
         """
         Retrieve headers to use during requesting
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            headers = json.load(f)['headers']
-
-        pairs = [(str(key), str(val)) for key, val in headers.items()]
-        return dict(pairs)
+        return self.config_dto.headers
 
     def get_encoding(self) -> str:
         """
         Retrieve encoding to use during parsing
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            encoding = json.load(f)['encoding']
-
-        return str(encoding)
+        return self.config_dto.encoding
 
     def get_timeout(self) -> int:
         """
         Retrieve number of seconds to wait for response
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            timeout = json.load(f)['timeout']
-
-        return int(timeout)
+        return self.config_dto.timeout
 
     def get_verify_certificate(self) -> bool:
         """
         Retrieve whether to verify certificate
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            if_verify = json.load(f)['should_verify_certificate']
-
-        return bool(if_verify)
+        return self.config_dto.should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
         Retrieve whether to use headless mode
         """
-        with open(self.path_to_config, 'r', encoding='utf-8') as f:
-            if_headless = json.load(f)['headless_mode']
-
-        return bool(if_headless)
+        return self.config_dto.headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -191,7 +167,10 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    response = requests.get(url, headers=config.get_headers(), timeout=config.get_timeout())
+    response = requests.get(url, headers=config.get_headers(),
+                            encoding=config.get_encoding(),
+                            timeout=config.get_timeout(),
+                            verify=config.get_verify_certificate())
     response.raise_for_status()
     return response
 
@@ -217,29 +196,44 @@ class Crawler:
         links = article_bs.find_all('a')
         for link in links:
             url = link['href']
-            if url.count('/') == 4 and url[0] == '/':
+            if url.count('/') == 4 and url[:9] == '/novosti/':
                 url = 'https://www.zebra-tv.ru' + url
-                return url
+                if url not in self.urls:
+                    self.urls.append(url)
 
     def find_articles(self) -> None:
         """
         Finds articles
         """
-        for url in self.config.get_seed_urls():
-            try:
-                response = make_request(url, config=self.config)
-                soup = BeautifulSoup(response.text, 'lxml')
-                new_url = self._extract_url(soup)
-                if new_url not in self.urls:
-                    self.urls.append(new_url)
-            except HTTPError:
-                continue
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument('--start-maximized')
+        if self.config.get_headless_mode():
+            chrome_options.add_argument('--headless=new')
+
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get(self.config.get_seed_urls()[0])
+
+        scroll_pause_time = 2.5
+        last_height = driver.execute_script("return document.body.scrollHeight")
+
+        while len(self.urls) != NUM_ARTICLES_UPPER_LIMIT:
+            driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+
+            current_html = driver.page_source
+            bs = BeautifulSoup(current_html, 'lxml')
+            self._extract_url(bs)
+
+            time.sleep(scroll_pause_time)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
 
     def get_search_urls(self) -> list:
         """
         Returns seed_urls param
         """
-        return self.config.get_seed_urls()
+        return self.urls()
 
 
 class HTMLParser:
@@ -265,24 +259,24 @@ class HTMLParser:
         """
         pass
 
-    def unify_date_format(self, date_str: str) -> datetime.datetime:
-        """
-        Unifies date format
-        """
-        pass
+    # def unify_date_format(self, date_str: str) -> datetime.datetime:
+    #     """
+    #     Unifies date format
+    #     """
+    #     pass
 
-    def parse(self) -> Union[Article, bool, list]:
-        """
-        Parses each article
-        """
-        pass
+    # def parse(self) -> Union[Article, bool, list]:
+    #     """
+    #     Parses each article
+    #     """
+    #     pass
 
 
 def prepare_environment(base_path: Union[Path, str]) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    base_path.mkdir(exist_ok=True)
+    base_path.mkdir(exist_ok=True, parents=True)
 
 
 def main() -> None:
