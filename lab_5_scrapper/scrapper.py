@@ -1,23 +1,21 @@
 """
 Crawler implementation
 """
+import datetime
+import json
+import re
 import shutil
+import time
 from pathlib import Path
 from typing import Pattern, Union
 
-import re
-import json
-from bs4 import BeautifulSoup
 import requests
-import datetime
+from bs4 import BeautifulSoup
 from selenium import webdriver
-from requests import HTTPError
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-import time
 
 from core_utils.article.article import Article
 from core_utils.article.io import to_raw, to_meta
-# from core_utils.article.ud import
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import (ASSETS_PATH, CRAWLER_CONFIG_PATH,
                                   NUM_ARTICLES_UPPER_LIMIT, TIMEOUT_LOWER_LIMIT,
@@ -25,33 +23,51 @@ from core_utils.constants import (ASSETS_PATH, CRAWLER_CONFIG_PATH,
 
 
 class IncorrectSeedURLError(Exception):
-    '''
-
-    '''
+    """"
+    Seed URL does not match the standard URL pattern
+    """
     pass
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
+    """
+    The number of articles that must be parsed is out of given range
+    """
     pass
 
 
 class IncorrectNumberOfArticlesError(Exception):
+    """
+    The number of articles that must be parsed is not integer
+    """
     pass
 
 
 class IncorrectHeadersError(Exception):
+    """
+    Headers value is not of a dictionary type
+    """
     pass
 
 
 class IncorrectEncodingError(Exception):
+    """
+    Encoding value is not of a string type
+    """
     pass
 
 
 class IncorrectTimeoutError(Exception):
+    """
+    Timeout value is out of range from 1 to the given value
+    """
     pass
 
 
 class IncorrectVerifyError(Exception):
+    """
+    Should_verify_certificate value is not of a boolean type
+    """
     pass
 
 
