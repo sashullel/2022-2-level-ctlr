@@ -194,7 +194,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(1, 2))
+    time.sleep(random.randint(2, 5))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
@@ -241,7 +241,7 @@ class Crawler:
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(self.config.get_seed_urls()[0])
 
-        scroll_pause_time = 1.5
+        scroll_pause_time = 2
         last_height = driver.execute_script("return document.body.scrollHeight")
         while len(self.urls) < self.config.get_num_articles():
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
