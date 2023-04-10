@@ -24,7 +24,9 @@ from core_utils.constants import (ASSETS_PATH, CRAWLER_CONFIG_PATH,
 
 class IncorrectSeedURLError(Exception):
     """"
-    Seed URL does not match the standard URL pattern
+    Seed URLs value is not of the list type or
+    its elements either do not match the standard URL pattern
+    or not of a string type
     """
     pass
 
@@ -77,7 +79,7 @@ class Config:
     """
 
     seed_urls: list[str]
-    total_articles_to_find_and_parse: int
+    num_articles: int
     headers: dict[str, str]
     encoding: str
     timeout: int
@@ -91,24 +93,22 @@ class Config:
         self.path_to_config = path_to_config
         self._validate_config_content()
 
+        config_dto = self._extract_config_content()
+        self._seed_urls = config_dto.seed_urls
+        self._num_articles = config_dto.total_articles
+        self._headers = config_dto.headers
+        self._encoding = config_dto.encoding
+        self._timeout = config_dto.timeout
+        self._should_verify_certificate = config_dto.should_verify_certificate
+        self._headless_mode = config_dto.headless_mode
+
     def _extract_config_content(self) -> ConfigDTO:
         """
         Returns config values
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
-
-            self.config_dto = ConfigDTO(seed_urls=config_params['seed_urls'],
-                                        headers=config_params['headers'],
-                                        total_articles_to_find_and_parse=
-                                        config_params['total_articles_to_find_and_parse'],
-                                        encoding=config_params['encoding'],
-                                        timeout=config_params['timeout'],
-                                        should_verify_certificate=
-                                        config_params['should_verify_certificate'],
-                                        headless_mode=config_params['headless_mode'])
-
-            return self.config_dto
+        return ConfigDTO(**config_params)
 
     def _validate_config_content(self) -> None:
         """
@@ -117,15 +117,20 @@ class Config:
         """
         config_dto = self._extract_config_content()
 
-        if not all(re.match('https?://w?w?w?.', url) for url in config_dto.seed_urls):
-            raise IncorrectSeedURLError('seed URL does not match the standard pattern')
+        if not isinstance(config_dto.seed_urls, list):
+            raise IncorrectSeedURLError('seed URLs must be of passed as a list')
 
-        if config_dto.total_articles not in range(1, NUM_ARTICLES_UPPER_LIMIT):
-            raise NumberOfArticlesOutOfRangeError('total number of articles is '
-                                                  'out of the given range')
+        if not all(re.match('https?://w?w?w?.*/', url) and isinstance(url, str) for url in config_dto.seed_urls):
+            raise IncorrectSeedURLError('seed URLs either do not match the standard pattern '
+                                        'or not strings')
 
-        if not isinstance(config_dto.total_articles, int) or isinstance(config_dto.total_articles, bool):
+        if not isinstance(config_dto.total_articles, int) or isinstance(config_dto.total_articles, bool) \
+                or config_dto.total_articles < 1:
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
+
+        if config_dto.total_articles > NUM_ARTICLES_UPPER_LIMIT:
+            raise NumberOfArticlesOutOfRangeError('total number of articles is '
+                                                  'out of range from 1 to the given value')
 
         if not isinstance(config_dto.headers, dict):
             raise IncorrectHeadersError('headers are not in a form of a dictionary')
@@ -136,50 +141,51 @@ class Config:
         if config_dto.timeout not in range(TIMEOUT_LOWER_LIMIT, TIMEOUT_UPPER_LIMIT + 1):
             raise IncorrectTimeoutError('timeout value must be a positive integer less than the given value')
 
-        if not isinstance(config_dto.should_verify_certificate, bool):
+        if not isinstance(config_dto.should_verify_certificate, bool) or \
+                not isinstance(config_dto.headless_mode, bool):
             raise IncorrectVerifyError('verify certificate value must either be True or False')
 
     def get_seed_urls(self) -> list[str]:
         """
         Retrieve seed urls
         """
-        return self.config_dto.seed_urls
+        return self._seed_urls
 
     def get_num_articles(self) -> int:
         """
         Retrieve total number of articles to scrape
         """
-        return self.config_dto.total_articles
+        return self._num_articles
 
     def get_headers(self) -> dict[str, str]:
         """
         Retrieve headers to use during requesting
         """
-        return self.config_dto.headers
+        return self._headers
 
     def get_encoding(self) -> str:
         """
         Retrieve encoding to use during parsing
         """
-        return self.config_dto.encoding
+        return self._encoding
 
     def get_timeout(self) -> int:
         """
         Retrieve number of seconds to wait for response
         """
-        return self.config_dto.timeout
+        return self._timeout
 
     def get_verify_certificate(self) -> bool:
         """
         Retrieve whether to verify certificate
         """
-        return self.config_dto.should_verify_certificate
+        return self._should_verify_certificate
 
     def get_headless_mode(self) -> bool:
         """
         Retrieve whether to use headless mode
         """
-        return self.config_dto.headless_mode
+        return self._headless_mode
 
 
 def make_request(url: str, config: Config) -> requests.models.Response:
@@ -187,7 +193,8 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    response = requests.get(url, headers=config.get_headers(),
+    response = requests.get(url,
+                            headers=config.get_headers(),
                             timeout=config.get_timeout(),
                             verify=config.get_verify_certificate())
     response.raise_for_status()
@@ -214,8 +221,8 @@ class Crawler:
         """
         links = article_bs.find_all('a')
         for link in links:
-            url = link['href']
-            if url.count('/') == 4 and url[:9] == '/novosti/':
+            url = link.get('href')
+            if url and url.count('/') == 4 and url[:9] == '/novosti/':
                 url = 'https://www.zebra-tv.ru' + url
                 if url not in self.urls and len(self.urls) < self.config.get_num_articles():
                     self.urls.append(url)
@@ -349,7 +356,6 @@ def main() -> None:
         to_raw(parsed_article)
         to_meta(parsed_article)
         print(i)
-
 
 if __name__ == "__main__":
     main()
