@@ -3,6 +3,7 @@ Crawler implementation
 """
 import datetime
 import json
+import random
 import re
 import shutil
 import time
@@ -193,6 +194,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
+    time.sleep(random.randint(1, 4))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
@@ -225,8 +227,7 @@ class Crawler:
             if url and url.count('/') == 4 and url[:9] == '/novosti/':
                 url = 'https://www.zebra-tv.ru' + url
                 if url not in self.urls and len(self.urls) < self.config.get_num_articles():
-                    self.urls.append(url)
-                    print(url)
+                    yield url
 
     def find_articles(self) -> None:
         """
@@ -247,19 +248,22 @@ class Crawler:
 
             current_html = driver.page_source
             bs = BeautifulSoup(current_html, 'lxml')
-            self._extract_url(bs)
+            url = self._extract_url(bs)
+            self.urls.append(url)
 
             time.sleep(scroll_pause_time)
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
             last_height = new_height
+        driver.quit()
+        print(self.get_search_urls())
 
     def get_search_urls(self) -> list:
         """
         Returns seed_urls param
         """
-        return self.urls
+        return self.config._seed_urls
 
 
 class HTMLParser:
@@ -338,6 +342,7 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
         base_path.mkdir(parents=True)
     except FileExistsError:
         shutil.rmtree(base_path)
+        base_path.mkdir(parents=True)
 
 
 def main() -> None:
@@ -356,6 +361,7 @@ def main() -> None:
         to_raw(parsed_article)
         to_meta(parsed_article)
         print(i)
+
 
 if __name__ == "__main__":
     main()
