@@ -29,49 +29,43 @@ class IncorrectSeedURLError(Exception):
     its elements either do not match the standard URL pattern
     or not of a string type
     """
-    pass
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
     """
     The number of articles that must be parsed is out of given range
     """
-    pass
 
 
 class IncorrectNumberOfArticlesError(Exception):
     """
     The number of articles that must be parsed is not integer
     """
-    pass
 
 
 class IncorrectHeadersError(Exception):
     """
     Headers value is not of a dictionary type
     """
-    pass
 
 
 class IncorrectEncodingError(Exception):
     """
     Encoding value is not of a string type
     """
-    pass
 
 
 class IncorrectTimeoutError(Exception):
     """
     Timeout value is out of range from 1 to the given value
     """
-    pass
+
 
 
 class IncorrectVerifyError(Exception):
     """
     Should_verify_certificate value is not of a boolean type
     """
-    pass
 
 
 class Config:
@@ -121,11 +115,13 @@ class Config:
         if not isinstance(config_dto.seed_urls, list):
             raise IncorrectSeedURLError('seed URLs must be of passed as a list')
 
-        if not all(re.match('https?://w?w?w?.*/', url) and isinstance(url, str) for url in config_dto.seed_urls):
+        if not all(re.match('^https?://[w{3}]?.*/', url) and
+                   isinstance(url, str) for url in config_dto.seed_urls):
             raise IncorrectSeedURLError('seed URLs either do not match the standard pattern '
                                         'or not strings')
 
-        if not isinstance(config_dto.total_articles, int) or isinstance(config_dto.total_articles, bool) \
+        if not isinstance(config_dto.total_articles, int) or \
+                isinstance(config_dto.total_articles, bool) \
                 or config_dto.total_articles < 1:
             raise IncorrectNumberOfArticlesError('total number of articles to parse is not integer')
 
@@ -221,13 +217,11 @@ class Crawler:
         """
         Finds and retrieves URL from HTML
         """
-        links = article_bs.find_all('a')
-        for link in links:
-            url = link.get('href')
-            if url and url.count('/') == 4 and url[:9] == '/novosti/':
-                url = 'https://www.zebra-tv.ru' + url
-                if url not in self.urls and len(self.urls) < self.config.get_num_articles():
-                    self.urls.append(url)
+        url = article_bs.get('href')
+        if url and url.count('/') == 4 and url[:9] == '/novosti/':
+            return 'https://www.zebra-tv.ru' + url
+        else:
+            pass
 
     def find_articles(self) -> None:
         """
@@ -246,8 +240,11 @@ class Crawler:
         while len(self.urls) < self.config.get_num_articles():
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             current_html = driver.page_source
-            bs = BeautifulSoup(current_html, 'lxml')
-            self._extract_url(bs)
+            article_bs = BeautifulSoup(current_html, 'lxml')
+            links = article_bs.find_all('a')
+            for link in links:
+                if len(self.urls) < self.config.get_num_articles():
+                    self.urls.append(self._extract_url(link))
 
             time.sleep(scroll_pause_time)
             new_height = driver.execute_script("return document.body.scrollHeight")
@@ -268,51 +265,51 @@ class HTMLParser:
     ArticleParser implementation
     """
 
-    def __init__(self, article_url: str, article_id: int, config: Config) -> None:
+    def __init__(self, full_url: str, article_id: int, config: Config) -> None:
         """
         Initializes an instance of the HTMLParser class
         """
-        self.article_url = article_url
+        self.full_url = full_url
         self.article_id = article_id
         self.config = config
-        self.article = Article(url=self.article_url, article_id=self.article_id)
+        self.article = Article(url=self.full_url, article_id=self.article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
         Finds text of article
         """
         # get the title
-        title = article_soup.find_all('h1', {'class': 'new-title'})[0]
+        title = article_soup.find('h1', {'class': 'new-title'})
         title_text = title.text
 
         # get the preview
-        preview = article_soup.find_all('div', {'class': 'preview-text'})[0]
+        preview = article_soup.find('div', {'class': 'preview-text'})
         preview_text = preview.text.strip()
         if preview_text[-1] not in '.?!':
             preview_text += '.'
 
         # get the article body
-        body_bs = article_soup.find_all('div', {'class': 'detail'})[0]
+        body_bs = article_soup.find('div', {'class': 'detail'})
         paragraph_texts = [par.text.strip() for par in body_bs.find_all('p')]
-        article_text = ' '.join(paragraph_texts)
 
+        self.article.text = ' '.join(([preview_text] + paragraph_texts))
         self.article.title = title_text
-        self.article.text = preview_text + ' ' + article_text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
         Finds meta information of article
         """
         try:
-            author = article_soup.find_all('span', {'class': 'author'})
-            self.article.author.extend(author[0].text[7:].split(', '))
+            author = article_soup.find_all('span', itemprop='author')[0]
+            self.article.author.extend(author.text.split(', '))
+
         except IndexError:
             self.article.author.append('NOT FOUND')
 
-        article_date = article_soup.find(itemprop='datePublished').get('content')
-        article_time = article_soup.find_all('span', {'class': 'date'})[0].text[-6:]
-        date_n_time = self.unify_date_format(article_date + article_time)
-        self.article.date = date_n_time
+        finally:
+            article_date = article_soup.find('meta', itemprop='datePublished').get('content')
+            article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
+            self.article.date = self.unify_date_format(article_date + article_time)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -324,7 +321,7 @@ class HTMLParser:
         """
         Parses each article
         """
-        response = make_request(self.article_url, self.config)
+        response = make_request(self.full_url, self.config)
         article_bs = BeautifulSoup(response.text, 'lxml')
         self._fill_article_with_text(article_bs)
         self._fill_article_with_meta_information(article_bs)
@@ -335,11 +332,9 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    try:
-        base_path.mkdir(parents=True)
-    except FileExistsError:
+    if base_path.exists():
         shutil.rmtree(base_path)
-        base_path.mkdir(parents=True)
+    base_path.mkdir(parents=True)
 
 
 def main() -> None:
@@ -353,12 +348,13 @@ def main() -> None:
     search_urls = crawler.urls
     print(search_urls)
 
-    for id, url in enumerate(search_urls, start=1):
-        parser = HTMLParser(article_url=search_urls[id - 1], article_id=id, config=configuration)
+    for idx, url in enumerate(search_urls, start=1):
+        parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
         parsed_article = parser.parse()
-        to_raw(parsed_article)
-        to_meta(parsed_article)
-        print(id)
+        if isinstance(parsed_article, Article):
+            to_raw(parsed_article)
+            to_meta(parsed_article)
+        print(idx)
 
 
 if __name__ == "__main__":
