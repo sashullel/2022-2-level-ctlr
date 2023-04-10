@@ -350,11 +350,11 @@ def main() -> None:
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
-    search_urls = crawler.urls()
+    search_urls = crawler.urls
     print(search_urls)
 
     for id, url in enumerate(search_urls, start=1):
-        parser = HTMLParser(article_url=search_urls[id], article_id=id, config=configuration)
+        parser = HTMLParser(article_url=search_urls[id - 1], article_id=id, config=configuration)
         parsed_article = parser.parse()
         to_raw(parsed_article)
         to_meta(parsed_article)
