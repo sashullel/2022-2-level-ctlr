@@ -4,9 +4,9 @@
         "cookie": "__ddg1_=5KV5h77vOTOENYaXTrpy; _ym_uid=1678726489890440476; _ym_d=1678726489; BX_USER_ID=46d52fc6210222a98cfc7f4bc3088d6a; gnezdo_uid=XV9kdWQdUnkJxlfWy6N2Ag==; __ddgid_=MOYF2F64HeHswr8O; __ddg2_=HgmDq9dheMIck2At; PHPSESSID=YqvOZXaeuoiRTARzlUKJl3PiPt0phBqU; ZEBRATV_BANNERS=1_49545_52_17042023%2C1_49605_36_17042023%2C1_49635_36_17042023%2C1_32172_36_17042023%2C1_49565_22_17042023%2C1_49585_20_17042023%2C1_49595_20_17042023%2C1_36873_20_17042023%2C1_49555_14_16042023%2C1_32312_14_16042023%2C1_39353_14_16042023%2C1_32322_14_16042023%2C1_36843_9_16042023%2C1_38213_5_16042023; _ym_isad=1; _ym_visorc=w",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
     },
-    "total_articles_to_find_and_parse": 100,
+    "total_articles_to_find_and_parse": 20,
     "encoding": "utf-8",
-    "timeout": 5,
+    "timeout": 1,
     "should_verify_certificate": true,
     "headless_mode": true
 }

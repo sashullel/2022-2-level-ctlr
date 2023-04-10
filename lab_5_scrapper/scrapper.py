@@ -194,7 +194,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(1, 4))
+    time.sleep(random.randint(1, 2))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
@@ -227,7 +227,7 @@ class Crawler:
             if url and url.count('/') == 4 and url[:9] == '/novosti/':
                 url = 'https://www.zebra-tv.ru' + url
                 if url not in self.urls and len(self.urls) < self.config.get_num_articles():
-                    yield url
+                    self.urls.append(url)
 
     def find_articles(self) -> None:
         """
@@ -241,15 +241,13 @@ class Crawler:
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(self.config.get_seed_urls()[0])
 
-        scroll_pause_time = 2.5
+        scroll_pause_time = 1.5
         last_height = driver.execute_script("return document.body.scrollHeight")
-        while len(self.urls) != self.config.get_num_articles():
+        while len(self.urls) < self.config.get_num_articles():
             driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-
             current_html = driver.page_source
             bs = BeautifulSoup(current_html, 'lxml')
-            url = self._extract_url(bs)
-            self.urls.append(url)
+            self._extract_url(bs)
 
             time.sleep(scroll_pause_time)
             new_height = driver.execute_script("return document.body.scrollHeight")
@@ -257,13 +255,12 @@ class Crawler:
                 break
             last_height = new_height
         driver.quit()
-        print(self.get_search_urls())
 
     def get_search_urls(self) -> list:
         """
         Returns seed_urls param
         """
-        return self.config._seed_urls
+        return self.config.get_seed_urls()
 
 
 class HTMLParser:
@@ -308,9 +305,9 @@ class HTMLParser:
         """
         try:
             author = article_soup.find_all('span', {'class': 'author'})
-            self.article.author = author[0].text[7:].strip(', ')
+            self.article.author.extend(author[0].text[7:].split(', '))
         except IndexError:
-            self.article.author = ['NOT FOUND']
+            self.article.author.append('NOT FOUND')
 
         article_date = article_soup.find(itemprop='datePublished').get('content')
         article_time = article_soup.find_all('span', {'class': 'date'})[0].text[-6:]
@@ -353,14 +350,15 @@ def main() -> None:
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
-    search_urls = crawler.get_search_urls()
+    search_urls = crawler.urls()
     print(search_urls)
-    for i in range(1, len(search_urls) + 1):
-        parser = HTMLParser(article_url=search_urls[i - 1], article_id=i, config=configuration)
+
+    for id, url in enumerate(search_urls, start=1):
+        parser = HTMLParser(article_url=search_urls[id], article_id=id, config=configuration)
         parsed_article = parser.parse()
         to_raw(parsed_article)
         to_meta(parsed_article)
-        print(i)
+        print(id)
 
 
 if __name__ == "__main__":
