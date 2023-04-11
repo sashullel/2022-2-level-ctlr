@@ -353,6 +353,7 @@ class CrawlerRecursive(Crawler):
         if self.crawler_data_path.exists():
             with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
                 crawler_data = json.load(f)
+
             self.start_url = crawler_data['start_url']
             self.urls = crawler_data['urls']
 
