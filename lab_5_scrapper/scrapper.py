@@ -235,7 +235,7 @@ class Crawler:
                 pass
 
             except requests.exceptions.ConnectTimeout:
-                time.sleep(5)
+                time.sleep(3)
 
             else:
                 article_bs = BeautifulSoup(response.text, 'lxml')
