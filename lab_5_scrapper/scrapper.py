@@ -59,7 +59,6 @@ class IncorrectTimeoutError(Exception):
     """
 
 
-
 class IncorrectVerifyError(Exception):
     """
     Should_verify_certificate value is not of a boolean type
@@ -231,19 +230,15 @@ class Crawler:
                 response = make_request(seed_url, self.config)
 
             except requests.exceptions.HTTPError:
-                pass
+                continue
 
-            except requests.exceptions.ConnectTimeout:
-                time.sleep(3)
-
-            else:
-                article_bs = BeautifulSoup(response.text, 'lxml')
-                links = article_bs.find_all('a')
-                for link in links:
-                    if len(self.urls) < self.config.get_num_articles():
-                        url = self._extract_url(link)
-                        if url:
-                            self.urls.append(url)
+            article_bs = BeautifulSoup(response.text, 'lxml')
+            links = article_bs.find_all('a')
+            for link in links:
+                if len(self.urls) < self.config.get_num_articles():
+                    url = self._extract_url(link)
+                    if url:
+                        self.urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -330,6 +325,62 @@ def prepare_environment(base_path: Union[Path, str]) -> None:
     base_path.mkdir(parents=True)
 
 
+class CrawlerRecursive(Crawler):
+    """
+    Recursive crawler implementation
+    """
+    def __init__(self, config: Config):
+        super().__init__(config)
+        self.crawler_data_path = Path(__file__).parent / 'crawler_data.json'
+        self.start_url = config.get_seed_urls()[0]
+        self.load_crawler_data()
+
+    def save_crawler_data(self) -> None:
+        """
+        Saves start_url and collected urls
+        from crawler into a json file
+        """
+        crawler_data = {'start_url': self.start_url, 'urls': self.urls}
+
+        with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
+            json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
+
+    def load_crawler_data(self) -> None:
+        """
+        Loads start_url and collected urls
+        from a json file into crawler
+        """
+        if self.crawler_data_path.exists():
+            with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
+                crawler_data = json.load(f)
+            self.start_url = crawler_data['start_url']
+            self.urls = crawler_data['urls']
+
+    def find_articles(self) -> None:
+        """
+        Finds articles
+        """
+        try:
+            response = make_request(self.start_url, self.config)
+
+        except requests.exceptions.HTTPError:
+            pass
+
+        else:
+            article_bs = BeautifulSoup(response.text, 'lxml')
+            links = article_bs.find_all('a')
+            for link in links:
+                if len(self.urls) < self.config.get_num_articles():
+                    url = self._extract_url(link)
+                    if url and url not in self.urls:
+                        self.urls.append(url)
+                        self.start_url = url
+                        self.save_crawler_data()
+
+        while len(self.urls) < self.config.get_num_articles():
+            self.find_articles()
+
+
 def main() -> None:
     """
     Entrypoint for scrapper module
@@ -346,6 +397,20 @@ def main() -> None:
             to_raw(parsed_article)
             to_meta(parsed_article)
         print(idx)
+
+
+def main_recursive() -> None:
+    configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
+    prepare_environment(ASSETS_PATH)
+    recursive_crawler = CrawlerRecursive(config=configuration)
+    recursive_crawler.find_articles()
+
+    for idx, url in enumerate(recursive_crawler.urls, start=1):
+        parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
+        parsed_article = parser.parse()
+        if isinstance(parsed_article, Article):
+            to_raw(parsed_article)
+            to_meta(parsed_article)
 
 
 if __name__ == "__main__":
