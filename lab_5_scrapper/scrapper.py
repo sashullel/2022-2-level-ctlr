@@ -227,7 +227,6 @@ class Crawler:
         Finds articles
         """
         for seed_url in self.config.get_seed_urls():
-
             try:
                 response = make_request(seed_url, self.config)
 
