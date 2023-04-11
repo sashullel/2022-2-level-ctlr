@@ -43,7 +43,7 @@ class IncorrectNumberOfArticlesError(Exception):
 
 class IncorrectHeadersError(Exception):
     """
-    Headers value is not of a dictionary type
+    Headers value is not of the dictionary type
     """
 
 
