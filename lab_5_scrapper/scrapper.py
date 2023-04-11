@@ -227,12 +227,16 @@ class Crawler:
         Finds articles
         """
         for seed_url in self.config.get_seed_urls():
+
             try:
                 response = make_request(seed_url, self.config)
+
             except requests.exceptions.HTTPError:
                 pass
+
             except requests.exceptions.ConnectTimeout:
                 time.sleep(5)
+
             else:
                 article_bs = BeautifulSoup(response.text, 'lxml')
                 links = article_bs.find_all('a')
