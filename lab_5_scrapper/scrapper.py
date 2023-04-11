@@ -400,6 +400,9 @@ def main() -> None:
 
 
 def main_recursive() -> None:
+    """
+    Entrypoint for scrapper module using recursive crawler
+    """
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
     prepare_environment(ASSETS_PATH)
     recursive_crawler = CrawlerRecursive(config=configuration)
