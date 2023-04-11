@@ -195,7 +195,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
                             timeout=config.get_timeout(),
                             verify=config.get_verify_certificate())
     response.raise_for_status()
-    response.encoding = config._encoding
+    response.encoding = config.get_encoding()
     return response
 
 
@@ -292,7 +292,8 @@ class HTMLParser:
         finally:
             article_date = article_soup.find('meta', itemprop='datePublished').get('content')
             article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
-            self.article.date = self.unify_date_format(article_date + article_time)
+            if article_date and article_time:
+                self.article.date = self.unify_date_format(article_date + article_time)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
