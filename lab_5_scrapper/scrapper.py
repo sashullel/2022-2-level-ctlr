@@ -12,8 +12,6 @@ from typing import Pattern, Union
 
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 from core_utils.article.article import Article
 from core_utils.article.io import to_meta, to_raw
@@ -136,7 +134,8 @@ class Config:
             raise IncorrectEncodingError('encoding must be specified as a string')
 
         if config_dto.timeout not in range(TIMEOUT_LOWER_LIMIT, TIMEOUT_UPPER_LIMIT + 1):
-            raise IncorrectTimeoutError('timeout value must be a positive integer less than the given value')
+            raise IncorrectTimeoutError('timeout value must be a positive integer '
+                                        'less than the given value')
 
         if not isinstance(config_dto.should_verify_certificate, bool) or \
                 not isinstance(config_dto.headless_mode, bool):
@@ -190,12 +189,13 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(2, 6))
+    time.sleep(random.randint(2, 5))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
                             verify=config.get_verify_certificate())
     response.raise_for_status()
+    response.encoding = config.encoding
     return response
 
 
@@ -226,33 +226,14 @@ class Crawler:
         """
         Finds articles
         """
-        chrome_options = ChromeOptions()
-        chrome_options.add_argument('--start-maximized')
-        if self.config.get_headless_mode():
-            chrome_options.add_argument('--headless=new')
-
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.get(self.config.get_seed_urls()[0])
-
-        scroll_pause_time = 2
-        last_height = driver.execute_script("return document.body.scrollHeight")
-        while len(self.urls) < self.config.get_num_articles():
-            driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-            current_html = driver.page_source
-            article_bs = BeautifulSoup(current_html, 'lxml')
+        for seed_url in self.config._seed_urls:
+            response = make_request(seed_url, self.config)
+            article_bs = BeautifulSoup(response.text, 'lxml')
             links = article_bs.find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
                     url = self._extract_url(link)
-                    if url:
-                        self.urls.append(url)
-
-            time.sleep(scroll_pause_time)
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
-        driver.quit()
+                    self.urls.append(url) if url else None
 
     def get_search_urls(self) -> list:
         """
@@ -346,10 +327,8 @@ def main() -> None:
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
-    search_urls = crawler.urls
-    print(search_urls)
 
-    for idx, url in enumerate(search_urls, start=1):
+    for idx, url in enumerate(crawler.urls, start=1):
         parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
         parsed_article = parser.parse()
         if isinstance(parsed_article, Article):
