@@ -1,12 +1,24 @@
 {
     "seed_urls": ["https://zebra-tv.ru/"],
     "headers": {
-        "cookie": "__ddg1_=5KV5h77vOTOENYaXTrpy; _ym_uid=1678726489890440476; _ym_d=1678726489; BX_USER_ID=46d52fc6210222a98cfc7f4bc3088d6a; gnezdo_uid=XV9kdWQdUnkJxlfWy6N2Ag==; __ddgid_=MOYF2F64HeHswr8O; __ddg2_=HgmDq9dheMIck2At; PHPSESSID=YqvOZXaeuoiRTARzlUKJl3PiPt0phBqU; ZEBRATV_BANNERS=1_49545_52_17042023%2C1_49605_36_17042023%2C1_49635_36_17042023%2C1_32172_36_17042023%2C1_49565_22_17042023%2C1_49585_20_17042023%2C1_49595_20_17042023%2C1_36873_20_17042023%2C1_49555_14_16042023%2C1_32312_14_16042023%2C1_39353_14_16042023%2C1_32322_14_16042023%2C1_36843_9_16042023%2C1_38213_5_16042023; _ym_isad=1; _ym_visorc=w",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-encoding": "gzip, deflate, br",
+        "accept-language": "en,ru;q=0.9,ru-RU;q=0.8,en-US;q=0.7",
+        "cache-control": "max-age=0",
+        "cookie": "__ddg1_=5KV5h77vOTOENYaXTrpy; _ym_uid=1678726489890440476; _ym_d=1678726489; BX_USER_ID=46d52fc6210222a98cfc7f4bc3088d6a; gnezdo_uid=XV9kdWQdUnkJxlfWy6N2Ag==; __ddgid_=MOYF2F64HeHswr8O; __ddg2_=HgmDq9dheMIck2At; _ym_isad=1; PHPSESSID=NFFvTNgE1BRvwaRccn2koVJWzBJQ9kT1; ZEBRATV_BANNERS=1_49545_86_18042023%2C1_49605_70_18042023%2C1_49635_70_18042023%2C1_32172_70_18042023%2C1_49565_46_18042023%2C1_49585_37_18042023%2C1_49595_37_18042023%2C1_36873_37_18042023%2C1_49555_24_18042023%2C1_32312_24_18042023%2C1_39353_24_18042023%2C1_32322_24_18042023%2C1_36843_16_18042023%2C1_38213_8_18042023; _ym_visorc=b",
+        "sec-ch-ua": "Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
+        "sec-ch-ua-mobile": ",?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "sec-fetch-user": "?1",
+        "upgrade-insecure-requests": "1",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
     },
-    "total_articles_to_find_and_parse": 5,
+    "total_articles_to_find_and_parse": 20,
     "encoding": "utf-8",
-    "timeout": 5,
+    "timeout": 3,
     "should_verify_certificate": true,
     "headless_mode": true
 }

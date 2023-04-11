@@ -190,7 +190,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(2, 5))
+    time.sleep(random.randint(2, 6))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
@@ -220,8 +220,7 @@ class Crawler:
         url = article_bs.get('href')
         if url and url.count('/') == 4 and url[:9] == '/novosti/':
             return 'https://www.zebra-tv.ru' + url
-        else:
-            pass
+        return ''
 
     def find_articles(self) -> None:
         """
@@ -244,7 +243,9 @@ class Crawler:
             links = article_bs.find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
-                    self.urls.append(self._extract_url(link))
+                    url = self._extract_url(link)
+                    if url:
+                        self.urls.append(url)
 
             time.sleep(scroll_pause_time)
             new_height = driver.execute_script("return document.body.scrollHeight")
@@ -307,7 +308,7 @@ class HTMLParser:
             self.article.author.append('NOT FOUND')
 
         finally:
-            article_date = article_soup.find('meta', itemprop='datePublished').get('content')
+            article_date = article_soup.find('meta', itemprop='datePublished')['content']
             article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
             self.article.date = self.unify_date_format(article_date + article_time)
 
