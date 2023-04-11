@@ -195,7 +195,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
                             timeout=config.get_timeout(),
                             verify=config.get_verify_certificate())
     response.raise_for_status()
-    response.encoding = config.encoding
+    response.encoding = config._encoding
     return response
 
 
@@ -219,21 +219,22 @@ class Crawler:
         """
         url = article_bs.get('href')
         if url and url.count('/') == 4 and url[:9] == '/novosti/':
-            return 'https://www.zebra-tv.ru' + url
+            return 'https://www.zebra-tv.ru' + str(url)
         return ''
 
     def find_articles(self) -> None:
         """
         Finds articles
         """
-        for seed_url in self.config._seed_urls:
+        for seed_url in self.config.get_seed_urls():
             response = make_request(seed_url, self.config)
             article_bs = BeautifulSoup(response.text, 'lxml')
             links = article_bs.find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
                     url = self._extract_url(link)
-                    self.urls.append(url) if url else None
+                    if url:
+                        self.urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -289,7 +290,7 @@ class HTMLParser:
             self.article.author.append('NOT FOUND')
 
         finally:
-            article_date = article_soup.find('meta', itemprop='datePublished')['content']
+            article_date = article_soup.find('meta', itemprop='datePublished').get('content')
             article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
             self.article.date = self.unify_date_format(article_date + article_time)
 
