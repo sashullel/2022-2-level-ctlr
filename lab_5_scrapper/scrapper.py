@@ -25,7 +25,7 @@ class IncorrectSeedURLError(Exception):
     """"
     Seed URLs value is not of the list type or
     its elements either do not match the standard URL pattern
-    or not of a string type
+    or not of the string type
     """
 
 
