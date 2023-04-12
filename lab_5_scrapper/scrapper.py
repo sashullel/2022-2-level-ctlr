@@ -218,11 +218,12 @@ class Crawler:
         """
         for seed_url in self.config.get_seed_urls():
             response = make_request(seed_url, self.config)
-            links = BeautifulSoup(response.text, 'lxml').find_all('a')
+            links = BeautifulSoup(response.content, 'lxml').find_all('a')
             for link in links:
-                if len(self.urls) < self.config.get_num_articles() and \
-                        (url := self._extract_url(link)):
-                    self.urls.append(url)
+                if len(self.urls) < self.config.get_num_articles():
+                    url = self._extract_url(link)
+                    if url:
+                        self.urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -281,7 +282,7 @@ class HTMLParser:
         Parses each article
         """
         response = make_request(self.full_url, self.config)
-        article_bs = BeautifulSoup(response.text, 'lxml')
+        article_bs = BeautifulSoup(response.content, 'lxml')
         self._fill_article_with_text(article_bs)
         self._fill_article_with_meta_information(article_bs)
         return self.article
@@ -312,6 +313,7 @@ class CrawlerRecursive(Crawler):
         from crawler into a json file
         """
         crawler_data = {'start_url': self.start_url, 'urls': self.urls}
+
         with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
             json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
 
@@ -331,7 +333,7 @@ class CrawlerRecursive(Crawler):
         Finds articles
         """
         response = make_request(self.start_url, self.config)
-        links = BeautifulSoup(response.text, 'lxml').find_all('a')
+        links = BeautifulSoup(response.content, 'lxml').find_all('a')
         for link in links:
             if len(self.urls) < self.config.get_num_articles():
                 url = self._extract_url(link)
