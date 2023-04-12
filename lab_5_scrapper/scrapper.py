@@ -208,7 +208,7 @@ class Crawler:
         Finds and retrieves URL from HTML
         """
         url = article_bs.get('href')
-        if url and url.count('/') == 4 and url.startswith('/novosti/'):
+        if url and url.count('/') == 4:# and url.startswith('/novosti/'):
             return 'https://www.zebra-tv.ru' + str(url)
         return ''
 
