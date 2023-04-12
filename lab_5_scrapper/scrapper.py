@@ -218,12 +218,10 @@ class Crawler:
         """
         for seed_url in self.config.get_seed_urls():
             response = make_request(seed_url, self.config)
-            links = BeautifulSoup(response.content, 'lxml').find_all('a')
-            for link in links:
-                if len(self.urls) < self.config.get_num_articles():
-                    url = self._extract_url(link)
-                    if url:
-                        self.urls.append(url)
+            for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
+                if len(self.urls) < self.config.get_num_articles() and \
+                        (url := self._extract_url(link)) and url not in self.urls:
+                    self.urls.append(url)
 
     def get_search_urls(self) -> list:
         """
@@ -333,14 +331,12 @@ class CrawlerRecursive(Crawler):
         Finds articles
         """
         response = make_request(self.start_url, self.config)
-        links = BeautifulSoup(response.content, 'lxml').find_all('a')
-        for link in links:
-            if len(self.urls) < self.config.get_num_articles():
-                url = self._extract_url(link)
-                if url and url not in self.urls:
-                    self.urls.append(url)
-                    self.start_url = url
-                    self.save_crawler_data()
+        for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
+            if len(self.urls) < self.config.get_num_articles() and \
+                    (url := self._extract_url(link)) and url not in self.urls:
+                self.urls.append(url)
+                self.start_url = url
+                self.save_crawler_data()
 
         while len(self.urls) < self.config.get_num_articles():
             self.find_articles()
