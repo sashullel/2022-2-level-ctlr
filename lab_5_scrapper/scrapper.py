@@ -332,20 +332,15 @@ class CrawlerRecursive(Crawler):
         """
         Finds articles
         """
-        try:
-            response = make_request(self.start_url, self.config)
-        except requests.exceptions.HTTPError:
-            pass
-
-        else:
-            links = BeautifulSoup(response.text, 'lxml').find_all('a')
-            for link in links:
-                if len(self.urls) < self.config.get_num_articles():
-                    url = self._extract_url(link)
-                    if url and url not in self.urls:
-                        self.urls.append(url)
-                        self.start_url = url
-                        self.save_crawler_data()
+        response = make_request(self.start_url, self.config)
+        links = BeautifulSoup(response.text, 'lxml').find_all('a')
+        for link in links:
+            if len(self.urls) < self.config.get_num_articles():
+                url = self._extract_url(link)
+                if url and url not in self.urls:
+                    self.urls.append(url)
+                    self.start_url = url
+                    self.save_crawler_data()
 
         while len(self.urls) < self.config.get_num_articles():
             self.find_articles()
