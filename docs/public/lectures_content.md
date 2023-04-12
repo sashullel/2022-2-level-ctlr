@@ -41,3 +41,11 @@ file in `JSON` format. Basic API: `dump` and `load`. Advanced parameters: indent
 paths with forward slash. Recommendation to build paths based on `__file__` global variable.
 Basic API: `exists`, `glob`, `mkdir`. Removal of directories: `rmdir` versus `shutil.rmtree`.
 Removal of files: `unlink`.
+
+## Lecture 4. Working with dates via `datetime`
+
+Date management as one of most challenging tasks in data analysis. 
+Module `datetime` to process dates. Basic API: `datetime` class, static methods
+`strftime` for formatting dates and `strptime` for parsing them from string. 
+Special directives to construct pattern string to parse. Necessity in additional processing of 
+raw date before parsing due to some `locale` requirements.

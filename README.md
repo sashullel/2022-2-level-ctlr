@@ -51,6 +51,7 @@ Instructors:
 | 24.03.2022 | **Seminar:** Headers and introduction to `bs4`. | [Listing][12]                |
 | 03.04.2022 | **Lecture:** Access file system via `pathlib`.  | [Listing][13], [Listing][14] |
 | 07.04.2022 | **Seminar:** Early version of `HTMLParser`.     | [Listing][15]                |
+| 10.04.2022 | **Lecture:** Working with dates via `datetime`. | [Listing][16]                |
 
 You can find a more complete summary from lectures as a 
 [list of topics](./docs/public/lectures_content.md). 
@@ -132,3 +133,4 @@ A lab work is accepted for oral presentation if all the criteria below are satis
 [13]: ./seminars/seminar_04_03_2023/try_json.py
 [14]: ./seminars/seminar_04_03_2023/try_fs.py
 [15]: ./seminars/seminar_04_07_2023/try_html_parser.py
+[16]: ./seminars/seminar_04_10_2023/try_dates.py
