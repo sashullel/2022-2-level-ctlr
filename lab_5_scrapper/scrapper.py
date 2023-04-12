@@ -208,7 +208,7 @@ class Crawler:
         Finds and retrieves URL from HTML
         """
         url = article_bs.get('href')
-        if url and url.count('/') == 4:  # and url.startswith('/novosti/'):
+        if url and url.count('/') == 4 and url.startswith('/novosti/'):
             return 'https://www.zebra-tv.ru' + str(url)
         return ''
 
@@ -217,11 +217,7 @@ class Crawler:
         Finds articles
         """
         for seed_url in self.config.get_seed_urls():
-            try:
-                response = make_request(seed_url, self.config)
-            except requests.exceptions.HTTPError:
-                continue
-
+            response = make_request(seed_url, self.config)
             links = BeautifulSoup(response.text, 'lxml').find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
