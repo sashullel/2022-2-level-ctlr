@@ -362,7 +362,6 @@ class CrawlerRecursive(Crawler):
         """
         try:
             response = make_request(self.start_url, self.config)
-
         except requests.exceptions.HTTPError:
             pass
 
