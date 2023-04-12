@@ -217,7 +217,7 @@ class Crawler:
         Finds and retrieves URL from HTML
         """
         url = article_bs.get('href')
-        if url and url.count('/') == 4 and url[:9] == '/novosti/':
+        if url and url.count('/') == 4 and url.startswith('/novosti/'):
             return 'https://www.zebra-tv.ru' + str(url)
         return ''
 
@@ -228,11 +228,11 @@ class Crawler:
         for seed_url in self.config.get_seed_urls():
             try:
                 response = make_request(seed_url, self.config)
+
             except requests.exceptions.HTTPError:
                 continue
 
-            article_bs = BeautifulSoup(response.text, 'lxml')
-            links = article_bs.find_all('a')
+            links = BeautifulSoup(response.text, 'lxml').find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
                     url = self._extract_url(link)
@@ -266,20 +266,16 @@ class HTMLParser:
         """
         # get the title
         title = article_soup.find('h1', {'class': 'new-title'})
-        title_text = title.text
+        self.article.title = title.text
 
         # get the preview
         preview = article_soup.find('div', {'class': 'preview-text'})
-        preview_text = preview.text.strip()
-        if preview_text[-1] not in '.?!':
-            preview_text += '.'
 
         # get the article body
         body_bs = article_soup.find('div', {'class': 'detail'})
-        paragraph_texts = [par.text.strip() for par in body_bs.find_all('p')]
+        paragraphs = ' '.join([par.text.strip() for par in body_bs.find_all('p')])
 
-        self.article.text = ' '.join(([preview_text] + paragraph_texts))
-        self.article.title = title_text
+        self.article.text = f'{preview.text.strip()}. {paragraphs}'
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -365,8 +361,7 @@ class CrawlerRecursive(Crawler):
             pass
 
         else:
-            article_bs = BeautifulSoup(response.text, 'lxml')
-            links = article_bs.find_all('a')
+            links = BeautifulSoup(response.text, 'lxml').find_all('a')
             for link in links:
                 if len(self.urls) < self.config.get_num_articles():
                     url = self._extract_url(link)
