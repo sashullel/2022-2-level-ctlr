@@ -256,11 +256,9 @@ class HTMLParser:
         Finds text of article
         """
         self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
-
-        article_body = article_soup.find('div', {'class': 'ins text'})
-        preview = article_body.find('div', {'class': 'preview-text'})
-        main_content = article_body.find('div', {'class': 'detail'})
-        paragraphs = ' '.join([par.text.strip() for par in main_content.find_all('p')])
+        preview = article_soup.find('div', {'class': 'preview-text'})
+        body_bs = article_soup.find('div', {'class': 'detail'})
+        paragraphs = ' '.join([par.text.strip() for par in body_bs.find_all('p')])
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
