@@ -188,7 +188,7 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(2, 5))
+    time.sleep(random.randint(2, 4))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
@@ -362,7 +362,6 @@ class CrawlerRecursive(Crawler):
         """
         try:
             response = make_request(self.start_url, self.config)
-
         except requests.exceptions.HTTPError:
             pass
 
