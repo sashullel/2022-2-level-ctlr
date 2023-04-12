@@ -228,7 +228,6 @@ class Crawler:
         for seed_url in self.config.get_seed_urls():
             try:
                 response = make_request(seed_url, self.config)
-
             except requests.exceptions.HTTPError:
                 continue
 
