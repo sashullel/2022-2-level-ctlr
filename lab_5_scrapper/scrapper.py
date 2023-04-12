@@ -255,9 +255,9 @@ class HTMLParser:
         """
         Finds text of article
         """
-        self.article.title = article_soup.find('h1', {'class': 'ins text'})
+        self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
 
-        article_body = article_soup.find('div', {'class': 'preview-text'})
+        article_body = article_soup.find('div', {'class': 'ins text'})
         preview = article_body.find('div', {'class': 'preview-text'})
         main_content = article_body.find('div', {'class': 'detail'})
         paragraphs = ' '.join([par.text.strip() for par in main_content.find_all('p')])
