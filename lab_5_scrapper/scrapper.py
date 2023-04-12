@@ -69,15 +69,6 @@ class Config:
     """
     Unpacks and validates configurations
     """
-
-    seed_urls: list[str]
-    num_articles: int
-    headers: dict[str, str]
-    encoding: str
-    timeout: int
-    verify_certificate: bool
-    headless_mode: bool
-
     def __init__(self, path_to_config: Path) -> None:
         """
         Initializes an instance of the Config class
@@ -264,14 +255,10 @@ class HTMLParser:
         """
         Finds text of article
         """
-        # get the title
         title = article_soup.find('h1', {'class': 'new-title'})
         self.article.title = title.text
 
-        # get the preview
         preview = article_soup.find('div', {'class': 'preview-text'})
-
-        # get the article body
         body_bs = article_soup.find('div', {'class': 'detail'})
         paragraphs = ' '.join([par.text.strip() for par in body_bs.find_all('p')])
 
@@ -281,18 +268,16 @@ class HTMLParser:
         """
         Finds meta information of article
         """
-        try:
-            author = article_soup.find_all('span', itemprop='author')[0]
+        author = article_soup.find('span', itemprop='author')
+        if author:
             self.article.author.extend(author.text.split(', '))
-
-        except IndexError:
+        else:
             self.article.author.append('NOT FOUND')
 
-        finally:
-            article_date = article_soup.find('meta', itemprop='datePublished').get('content')
-            article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
-            if article_date and article_time:
-                self.article.date = self.unify_date_format(str(article_date) + article_time)
+        article_date = article_soup.find('meta', itemprop='datePublished').get('content')
+        article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
+        if article_date and article_time:
+            self.article.date = self.unify_date_format(str(article_date) + article_time)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
