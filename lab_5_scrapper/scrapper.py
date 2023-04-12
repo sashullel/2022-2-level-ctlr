@@ -217,7 +217,10 @@ class Crawler:
         Finds articles
         """
         for seed_url in self.config.get_seed_urls():
-            response = make_request(seed_url, self.config)
+            try:
+                response = make_request(seed_url, self.config)
+            except requests.exceptions.HTTPError:
+                continue
             for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
                 if len(self.urls) < self.config.get_num_articles() and \
                         (url := self._extract_url(link)) and url not in self.urls:
@@ -330,7 +333,10 @@ class CrawlerRecursive(Crawler):
         """
         Finds articles
         """
-        response = make_request(self.start_url, self.config)
+        try:
+            response = make_request(self.start_url, self.config)
+        except requests.exceptions.HTTPError:
+            pass
         for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
             if len(self.urls) < self.config.get_num_articles() and \
                     (url := self._extract_url(link)) and url not in self.urls:
