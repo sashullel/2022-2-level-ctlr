@@ -256,7 +256,7 @@ class HTMLParser:
         preview = article_soup.find('div', {'class': 'preview-text'})
         body_bs = article_soup.find('div', {'class': 'detail'})
         paragraphs = ' '.join([par.text.strip() for par in
-                               body_bs.find_all(['p', 'div', {'class': 'quote'}])])
+                               body_bs.find_all(['p', ('div', {'class': 'quote'})])])
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
@@ -291,7 +291,7 @@ class HTMLParser:
         return self.article
 
 
-def prepare_environment(base_path: Union[Path, str], recursive=False) -> None:
+def prepare_environment(base_path: Union[Path, str], recursive: bool = False) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
