@@ -259,8 +259,8 @@ class HTMLParser:
         for tag in body_bs.select('p, div.quote'):
             if tag.name == "p" and len(tag.attrs) != 0:
                 continue
-            paragraphs.append(tag)
-        paragraphs = ' '.join([par.text.strip() for par in paragraphs])
+            paragraphs.append(tag.text.strip())
+        paragraphs = ' '.join(paragraphs)
         print(paragraphs)
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
