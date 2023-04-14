@@ -1,11 +1,13 @@
+[
 {
-    "seed_urls": ["https://zebra-tv.ru/?pg=2", "https://zebra-tv.ru/?pg=7"],
+    "seed_urls": ["https://zebra-tv.ru/?pg=2","https://zebra-tv.ru/?pg=7"],
     "headers": {
         "cookie": "__ddg1_=5KV5h77vOTOENYaXTrpy; _ym_uid=1678726489890440476; _ym_d=1678726489; BX_USER_ID=46d52fc6210222a98cfc7f4bc3088d6a; gnezdo_uid=XV9kdWQdUnkJxlfWy6N2Ag==; __ddgid_=MOYF2F64HeHswr8O; __ddg2_=HgmDq9dheMIck2At; _ym_isad=1; PHPSESSID=NFFvTNgE1BRvwaRccn2koVJWzBJQ9kT1; ZEBRATV_BANNERS=1_49545_86_18042023%2C1_49605_70_18042023%2C1_49635_70_18042023%2C1_32172_70_18042023%2C1_49565_46_18042023%2C1_49585_37_18042023%2C1_49595_37_18042023%2C1_36873_37_18042023%2C1_49555_24_18042023%2C1_32312_24_18042023%2C1_39353_24_18042023%2C1_32322_24_18042023%2C1_36843_16_18042023%2C1_38213_8_18042023"
     },
     "total_articles_to_find_and_parse": 10,
     "encoding": "utf-8",
-    "timeout": 2,
+    "timeout": 3,
     "should_verify_certificate": true,
     "headless_mode": true
 }
+]

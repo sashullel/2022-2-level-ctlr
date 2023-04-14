@@ -91,7 +91,7 @@ class Config:
         """
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config_params = json.load(f)
-        return ConfigDTO(**config_params)
+        return ConfigDTO(**config_params[0])
 
     def _validate_config_content(self) -> None:
         """
@@ -179,12 +179,12 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Delivers a response from a request
     with given configuration
     """
-    time.sleep(random.randint(1, 4))
+    time.sleep(random.randrange(1, 4))
     response = requests.get(url,
                             headers=config.get_headers(),
                             timeout=config.get_timeout(),
                             verify=config.get_verify_certificate())
-    # response.raise_for_status()
+    response.raise_for_status()
     response.encoding = config.get_encoding()
     return response
 
@@ -255,7 +255,8 @@ class HTMLParser:
         self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
         preview = article_soup.find('div', {'class': 'preview-text'})
         body_bs = article_soup.find('div', {'class': 'detail'})
-        paragraphs = ' '.join([par.text.strip() for par in body_bs.find_all('p')])
+        paragraphs = ' '.join([par.text.strip() for par in
+                               body_bs.find_all(['p', 'div', {'class': 'quote'}])])
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
@@ -290,13 +291,17 @@ class HTMLParser:
         return self.article
 
 
-def prepare_environment(base_path: Union[Path, str]) -> None:
+def prepare_environment(base_path: Union[Path, str], recursive=False) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    if base_path.exists():
-        shutil.rmtree(base_path)
-    base_path.mkdir(parents=True)
+    if not recursive:
+        if base_path.exists():
+            shutil.rmtree(base_path)
+        base_path.mkdir(parents=True)
+    else:
+        if not base_path.exists():
+            base_path.mkdir(parents=True)
 
 
 class CrawlerRecursive(Crawler):
@@ -308,6 +313,7 @@ class CrawlerRecursive(Crawler):
         self.crawler_data_path = Path(__file__).parent / 'crawler_data.json'
         self.start_url = config.get_seed_urls()[0]
         self.num_visited_urls = 0
+        self.last_file_idx = 0
 
     def _save_crawler_data(self) -> None:
         """
@@ -315,6 +321,7 @@ class CrawlerRecursive(Crawler):
         from crawler into a json file
         """
         crawler_data = {
+            'last_file_idx': self.last_file_idx,
             'num_visited_urls': self.num_visited_urls,
             'start_url': self.start_url,
             'urls': self.urls
@@ -330,12 +337,23 @@ class CrawlerRecursive(Crawler):
         if self.crawler_data_path.exists():
             with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
                 crawler_data = json.load(f)
+            self.last_file_idx = crawler_data['last_file_idx']
             self.num_visited_urls = crawler_data['num_visited_urls']
             self.start_url = crawler_data['start_url']
             self.urls = crawler_data['urls']
-            print('previously saved crawler data is loaded')
-        else:
-            print('no previously saved crawler data is found')
+
+    def update_file_index(self) -> None:
+        """
+        Updates index of the last parsed article file
+        """
+        if self.crawler_data_path.exists():
+            with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
+                crawler_data = json.load(f)
+
+            crawler_data['last_file_idx'] = self.last_file_idx
+
+            with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
+                json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
 
     def find_articles(self) -> None:
         """
@@ -369,8 +387,6 @@ def main() -> None:
     prepare_environment(ASSETS_PATH)
     crawler = Crawler(config=configuration)
     crawler.find_articles()
-    print('the required number of articles has been collected\n'
-          'parsing through each..')
 
     for idx, url in enumerate(crawler.urls, start=1):
         parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
@@ -378,7 +394,6 @@ def main() -> None:
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)
             to_meta(parsed_article)
-    print('done!')
 
 
 def main_recursive() -> None:
@@ -386,21 +401,21 @@ def main_recursive() -> None:
     Entrypoint for scrapper module using recursive crawler
     """
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
-    prepare_environment(ASSETS_PATH)
+    prepare_environment(ASSETS_PATH, recursive=True)
     recursive_crawler = CrawlerRecursive(config=configuration)
     recursive_crawler.load_crawler_data()
     recursive_crawler.find_articles()
-    print('the required number of articles has been collected\n'
-          'parsing through each..')
 
-    for idx, url in enumerate(recursive_crawler.urls, start=1):
-        parser = HTMLParser(full_url=url, article_id=idx, config=configuration)
+    for idx in range(recursive_crawler.last_file_idx + 1, len(recursive_crawler.urls) + 1):
+        recursive_crawler.last_file_idx = idx
+        recursive_crawler.update_file_index()
+        current_url = recursive_crawler.urls[idx - 1]
+        parser = HTMLParser(full_url=current_url, article_id=idx, config=configuration)
         parsed_article = parser.parse()
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)
             to_meta(parsed_article)
-    print('done!')
 
 
 if __name__ == "__main__":
-    main()
+    main_recursive()
