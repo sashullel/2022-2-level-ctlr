@@ -260,8 +260,8 @@ class HTMLParser:
             if tag.name == "p" and len(tag.attrs) != 0:
                 continue
             paragraphs.append(tag.text.strip())
-        paragraphs = ' '.join(paragraphs)
-        self.article.text = '. '.join((preview, str(paragraphs)))
+        paragraphs = str(' '.join(paragraphs))
+        self.article.text = '. '.join((preview, paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
