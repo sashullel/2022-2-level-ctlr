@@ -261,7 +261,6 @@ class HTMLParser:
                 continue
             paragraphs.append(tag.text.strip())
         paragraphs = ' '.join(paragraphs)
-        print(paragraphs)
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
