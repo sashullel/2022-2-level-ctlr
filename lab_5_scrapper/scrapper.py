@@ -255,8 +255,13 @@ class HTMLParser:
         self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
         preview = article_soup.find('div', {'class': 'preview-text'})
         body_bs = article_soup.find('div', {'class': 'detail'})
-        paragraphs = ' '.join([par.text.strip() for par in
-                               body_bs.find_all(['p', ('div', {'class': 'quote'})])])
+        paragraphs = []
+        for tag in body_bs.select('p, div.quote'):
+            if tag.name == "p" and len(tag.attrs) != 0:
+                continue
+            paragraphs.append(tag)
+        paragraphs = ' '.join([par.text.strip() for par in paragraphs])
+        print(paragraphs)
         self.article.text = '. '.join((preview.text.strip(), paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
@@ -418,4 +423,4 @@ def main_recursive() -> None:
 
 
 if __name__ == "__main__":
-    main_recursive()
+    main()
