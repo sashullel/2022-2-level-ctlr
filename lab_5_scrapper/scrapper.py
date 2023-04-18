@@ -255,12 +255,12 @@ class HTMLParser:
         self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
         preview = article_soup.find('div', {'class': 'preview-text'}).text.strip()
         body_bs = article_soup.find('div', {'class': 'detail'})
-        paragraphs = []
+        paragraphs_lst = []
         for tag in body_bs.select('p, div.quote'):
             if tag.name == "p" and len(tag.attrs) != 0:
                 continue
-            paragraphs.append(tag.text.strip())
-        paragraphs = str(' '.join(paragraphs))
+            paragraphs_lst.append(tag.text.strip())
+        paragraphs = ' '.join(paragraphs_lst)
         self.article.text = '. '.join((preview, paragraphs))
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
