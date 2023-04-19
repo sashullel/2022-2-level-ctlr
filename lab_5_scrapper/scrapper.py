@@ -208,8 +208,14 @@ class Crawler:
         Finds and retrieves URL from HTML
         """
         url = article_bs.get('href')
-        if url and url.count('/') == 4 and url.startswith('/novosti/'):
-            return 'https://www.zebra-tv.ru' + str(url)
+        # implementation for zebra-tv.ru website
+        # if url and url.count('/') == 4 and url.startswith('/novosti/'):
+        #     return 'https://www.zebra-tv.ru' + str(url)
+        if url:
+            if url.startswith('https://www.nn.ru/'):
+                return url
+            elif url.startswith('/'):
+                return 'https://www.nn.ru' + str(url)
         return ''
 
     def find_articles(self) -> None:
@@ -224,7 +230,8 @@ class Crawler:
 
             for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
                 if len(self.urls) < self.config.get_num_articles() and \
-                        (url := self._extract_url(link)) and url not in self.urls:
+                        (url := self._extract_url(link)) and url not in self.urls \
+                        and url.startswith('https://www.nn.ru/text') and url.count('/') == 9:
                     self.urls.append(url)
 
     def get_search_urls(self) -> list:
@@ -252,14 +259,24 @@ class HTMLParser:
         """
         Finds text of article
         """
-        self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
-        preview = article_soup.find('div', {'class': 'preview-text'}).text.strip()
-        body_bs = article_soup.find('div', {'class': 'detail'})
-        paragraphs_lst = []
-        for tag in body_bs.select('p, div.quote'):
-            if tag.name == "p" and len(tag.attrs) != 0:
-                continue
-            paragraphs_lst.append(tag.text.strip())
+        # implementation for zebra-tv.ru website
+        # self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
+        # preview = article_soup.find('div', {'class': 'preview-text'}).text.strip()
+        # body_bs = article_soup.find('div', {'class': 'detail'})
+        # paragraphs_lst = []
+        # for tag in body_bs.select('p, div.quote'):
+        #     if tag.name == 'p' and len(tag.attrs) != 0:
+        #         continue
+        #     paragraphs_lst.append(tag.text.strip())
+        # paragraphs = ' '.join(paragraphs_lst)
+        # self.article.text = '. '.join((preview, paragraphs))
+
+        # implementation for nn.ru website
+        self.article.title = article_soup.find('h1', itemprop='headline').text
+        preview = article_soup.find('p', itemprop='alternativeHeadline').text
+        paragraphs_lst = [par.text.strip() for par in
+                          article_soup.find('div', itemprop='articleBody')
+                          if par.name and par.name != 'figure']
         paragraphs = ' '.join(paragraphs_lst)
         self.article.text = '. '.join((preview, paragraphs))
 
@@ -267,22 +284,36 @@ class HTMLParser:
         """
         Finds meta information of article
         """
-        author = article_soup.find('span', itemprop='author')
-        if author:
-            self.article.author.extend(author.text.split(', '))
-        else:
-            self.article.author.append('NOT FOUND')
+        # # implementation for zebra-tv.ru website
+        # author = article_soup.find('span', itemprop='author')
+        # if author:
+        #     self.article.author.extend(author.text.split(', '))
+        # else:
+        #     self.article.author.append('NOT FOUND')
+        #
+        # article_date = article_soup.find('meta', itemprop='datePublished').get('content')
+        # article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
+        # if article_date and article_time:
+        #     self.article.date = self.unify_date_format(str(article_date) + article_time)
 
-        article_date = article_soup.find('meta', itemprop='datePublished').get('content')
-        article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
-        if article_date and article_time:
-            self.article.date = self.unify_date_format(str(article_date) + article_time)
+        # implementation for nn.ru website
+        author = article_soup.find('p', itemprop='name')
+        self.article.author = [author.text] if author else ['NOT FOUND']
+        self.article.date = self.unify_date_format(
+            article_soup.find('div', itemprop='datePublished')['datetime'])
+        for link in article_soup.find_all('a', href=True):
+            if link['href'].startswith('/text/tags/'):
+                self.article.topics.append(link['title'])
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
         Unifies date format
         """
-        return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M')
+        # implementation for zebra-tv.ru website
+        # return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M')
+
+        # implementation for nn.ru website
+        return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
 
     def parse(self) -> Union[Article, bool, list]:
         """
@@ -315,9 +346,11 @@ class CrawlerRecursive(Crawler):
     def __init__(self, config: Config):
         super().__init__(config)
         self.crawler_data_path = Path(__file__).parent / 'crawler_data.json'
+        self.last_file_index = 0
+        self.last_index = 0
         self.start_url = config.get_seed_urls()[0]
-        self.num_visited_urls = 0
-        self.last_file_idx = 0
+        self.urls = [self.start_url]
+        self.article_urls = []
 
     def _save_crawler_data(self) -> None:
         """
@@ -325,10 +358,11 @@ class CrawlerRecursive(Crawler):
         from crawler into a json file
         """
         crawler_data = {
-            'last_file_idx': self.last_file_idx,
-            'num_visited_urls': self.num_visited_urls,
+            'last_file_index': self.last_file_index,
+            'last_index': self.last_index,
             'start_url': self.start_url,
-            'urls': self.urls
+            'urls': self.urls,
+            'article_urls': self.article_urls
                         }
         with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
             json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
@@ -341,30 +375,25 @@ class CrawlerRecursive(Crawler):
         if self.crawler_data_path.exists():
             with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
                 crawler_data = json.load(f)
-            self.last_file_idx = crawler_data['last_file_idx']
-            self.num_visited_urls = crawler_data['num_visited_urls']
+            self.last_file_index = crawler_data['last_file_index']
+            self.last_index = crawler_data['last_index']
             self.start_url = crawler_data['start_url']
             self.urls = crawler_data['urls']
+            self.article_urls = crawler_data['article_urls']
 
     def update_file_index(self) -> None:
-        """
-        Updates index of the last parsed article file
-        """
-        if self.crawler_data_path.exists():
-            with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
-                crawler_data = json.load(f)
-
-            crawler_data['last_file_idx'] = self.last_file_idx
-
-            with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
-                json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
+        with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
+            crawler_data = json.load(f)
+        crawler_data['last_file_index'] = self.last_file_index
+        with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
+            json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
 
     def find_articles(self) -> None:
         """
         Finds articles
         """
-        if self.num_visited_urls:
-            self.start_url = self.urls[self.num_visited_urls - 1]
+        if self.last_index != 0:
+            self.start_url = self.urls[self.last_index]
 
         try:
             response = make_request(self.start_url, self.config)
@@ -374,12 +403,19 @@ class CrawlerRecursive(Crawler):
         else:
             for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
                 url = self._extract_url(link)
-                if url and len(self.urls) < self.config.get_num_articles():
-                    self.urls.append(url)
-            self._save_crawler_data()
 
+                if url and url not in self.urls:
+                    if url.count('/') == 9 and url.startswith('https://www.nn.ru/text/') and \
+                            len(self.article_urls) < self.config.get_num_articles() and \
+                            not url.startswith('https://www.nn.ru/text/longread/') and \
+                            url not in self.article_urls:
+                        self.article_urls.append(url)
+                    self.urls.append(url)
+                    self._save_crawler_data()
+
+        self.last_index += 1
+        self._save_crawler_data()
         while len(self.urls) < self.config.get_num_articles():
-            self.num_visited_urls += 1
             self.find_articles()
 
 
@@ -410,11 +446,11 @@ def main_recursive() -> None:
     recursive_crawler.load_crawler_data()
     recursive_crawler.find_articles()
 
-    for idx in range(recursive_crawler.last_file_idx + 1, len(recursive_crawler.urls) + 1):
-        recursive_crawler.last_file_idx = idx
+    for idx in range(recursive_crawler.last_file_index, len(recursive_crawler.article_urls)):
+        recursive_crawler.last_file_index = idx
         recursive_crawler.update_file_index()
-        current_url = recursive_crawler.urls[idx - 1]
-        parser = HTMLParser(full_url=current_url, article_id=idx, config=configuration)
+        current_url = recursive_crawler.article_urls[idx]
+        parser = HTMLParser(full_url=current_url, article_id=idx+1, config=configuration)
         parsed_article = parser.parse()
         if isinstance(parsed_article, Article):
             to_raw(parsed_article)

@@ -1,11 +1,12 @@
 {
-    "seed_urls": ["https://zebra-tv.ru/?pg=7"],
+    "seed_urls": ["https://www.nn.ru/"],
     "headers": {
-        "cookie": "__ddg1_=5KV5h77vOTOENYaXTrpy; _ym_uid=1678726489890440476; _ym_d=1678726489; BX_USER_ID=46d52fc6210222a98cfc7f4bc3088d6a; gnezdo_uid=XV9kdWQdUnkJxlfWy6N2Ag==; __ddgid_=MOYF2F64HeHswr8O; __ddg2_=HgmDq9dheMIck2At; _ym_isad=1; PHPSESSID=NFFvTNgE1BRvwaRccn2koVJWzBJQ9kT1; ZEBRATV_BANNERS=1_49545_86_18042023%2C1_49605_70_18042023%2C1_49635_70_18042023%2C1_32172_70_18042023%2C1_49565_46_18042023%2C1_49585_37_18042023%2C1_49595_37_18042023%2C1_36873_37_18042023%2C1_49555_24_18042023%2C1_32312_24_18042023%2C1_39353_24_18042023%2C1_32322_24_18042023%2C1_36843_16_18042023%2C1_38213_8_18042023"
+        "cookie": "__ddg1_=11SnjFNSqLSa1oDCCcOc; jtnews_ab_24=A; jtnews_ab_29=A; ngs_uid=wxPcC2Q+8FFvXvxphaXTAg==; jtnews_adblock=true; ngs_analytics_uid=wxPcEmQ+8FOdr6uZBdQAAg==; _ym_uid=1681846357613562188; _ym_d=1681846357; _ym_isad=1; SessIDNNRU=j2o50n3egfro664erulj3daj6a; jtnews_crookie_reset=true; crookie=K/ire41ow+WxWHE/3yqXkzFtT1MrsYDpYXLrFqjfybhiQ+R4+OtBsik5GXm1Io0IRZOjq1IMpxVTLfYg18lTEe9e3jw=; cmtchd=MTY4MTg0NjM1ODUwNg; tmr_lvid=39bc49bca2e5636292428d3b4e4d0b58; tmr_lvidTS=1681846423098; tmr_detect=1|1681846423430; __utma=85922374.1982606768.1681846424.1681846424.1681846424.1; __utmc=85922374; __utmz=85922374.1681846424.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __ddg5_=QH0p9nFuTI4sC3qi; _ym_visorc=b; ngs_sid=f77370439e92a0d9582708824bcb6572; tildauid=1681853154682.455586; tildasid=1681853154682.537327; previousUrl=nn.ru/text/longread/2023/04/14/72220643/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
     },
     "total_articles_to_find_and_parse": 10,
     "encoding": "utf-8",
-    "timeout": 3,
+    "timeout": 2,
     "should_verify_certificate": true,
     "headless_mode": true
 }
