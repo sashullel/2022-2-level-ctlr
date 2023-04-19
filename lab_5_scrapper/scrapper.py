@@ -213,8 +213,8 @@ class Crawler:
         #     return 'https://www.zebra-tv.ru' + str(url)
         if url:
             if url.startswith('https://www.nn.ru/'):
-                return url
-            elif url.startswith('/'):
+                return str(url)
+            if url.startswith('/'):
                 return 'https://www.nn.ru' + str(url)
         return ''
 
@@ -299,8 +299,9 @@ class HTMLParser:
         # implementation for nn.ru website
         author = article_soup.find('p', itemprop='name')
         self.article.author = [author.text] if author else ['NOT FOUND']
-        self.article.date = self.unify_date_format(
-            article_soup.find('div', itemprop='datePublished')['datetime'])
+        date = article_soup.find('div', itemprop='datePublished').get('datetime')
+        if date:
+            self.article.date = self.unify_date_format(str(date))
         for link in article_soup.find_all('a', href=True):
             if link['href'].startswith('/text/tags/'):
                 self.article.topics.append(link['title'])
@@ -382,6 +383,10 @@ class CrawlerRecursive(Crawler):
             self.article_urls = crawler_data['article_urls']
 
     def update_file_index(self) -> None:
+        """
+        Updates the index used in the
+        file name of an article
+        """
         with open(self.crawler_data_path, 'r', encoding='utf-8') as f:
             crawler_data = json.load(f)
         crawler_data['last_file_index'] = self.last_file_index
