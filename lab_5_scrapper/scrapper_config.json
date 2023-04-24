@@ -1,10 +1,10 @@
 {
-    "seed_urls": ["https://www.nn.ru/"],
+    "seed_urls": ["https://74.ru/text/", "https://74.ru/text/?page=2", "https://74.ru/text/?page=3"],
     "headers": {
-        "cookie": "__ddg1_=11SnjFNSqLSa1oDCCcOc; jtnews_ab_24=A; jtnews_ab_29=A; ngs_uid=wxPcC2Q+8FFvXvxphaXTAg==; jtnews_adblock=true; ngs_analytics_uid=wxPcEmQ+8FOdr6uZBdQAAg==; _ym_uid=1681846357613562188; _ym_d=1681846357; _ym_isad=1; SessIDNNRU=j2o50n3egfro664erulj3daj6a; jtnews_crookie_reset=true; crookie=K/ire41ow+WxWHE/3yqXkzFtT1MrsYDpYXLrFqjfybhiQ+R4+OtBsik5GXm1Io0IRZOjq1IMpxVTLfYg18lTEe9e3jw=; cmtchd=MTY4MTg0NjM1ODUwNg; tmr_lvid=39bc49bca2e5636292428d3b4e4d0b58; tmr_lvidTS=1681846423098; tmr_detect=1|1681846423430; __utma=85922374.1982606768.1681846424.1681846424.1681846424.1; __utmc=85922374; __utmz=85922374.1681846424.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __ddg5_=QH0p9nFuTI4sC3qi; _ym_visorc=b; ngs_sid=f77370439e92a0d9582708824bcb6572; tildauid=1681853154682.455586; tildasid=1681853154682.537327; previousUrl=nn.ru/text/longread/2023/04/14/72220643/",
+        "cookie": "__ddg1_=9lrz1GM89dEOfHviMIo9; ngs_uid=wxPcFmRCN9ENO6CtA0LZAg==; jtnews_ab_24=A; jtnews_ab_29=A; jtnews_ab_personal_selection_3_v1=A; jtnews_ab_main_page_2redesign=A; jtnews_ab_adv_test_v2=A; ngs_uid=wxPcF2RCN9FSlztMAzwdAg==; ngs_analytics_uid=wxPcEmRCN9KJdTUXIiJLAg==; _ym_uid=168206126617631775; _ym_d=1682061266; _ym_isad=2; _ym_visorc=b; adrdel=1; adrcid=AsYexjqMtd638LtkL43KhrA",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
     },
-    "total_articles_to_find_and_parse": 10,
+    "total_articles_to_find_and_parse": 100,
     "encoding": "utf-8",
     "timeout": 2,
     "should_verify_certificate": true,

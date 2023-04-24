@@ -207,15 +207,11 @@ class Crawler:
         """
         Finds and retrieves URL from HTML
         """
-        url = article_bs.get('href')
-        # implementation for zebra-tv.ru website
-        # if url and url.count('/') == 4 and url.startswith('/novosti/'):
-        #     return 'https://www.zebra-tv.ru' + str(url)
-        if url:
-            if url.startswith('https://www.nn.ru/'):
-                return str(url)
-            if url.startswith('/'):
-                return 'https://www.nn.ru' + str(url)
+        url = article_bs['href']
+        if url.startswith('/text/'):
+            return 'https://74.ru' + str(url)
+        if url.startswith('https://74.ru'):
+            return url
         return ''
 
     def find_articles(self) -> None:
@@ -228,10 +224,10 @@ class Crawler:
             except requests.exceptions.HTTPError:
                 continue
 
-            for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
-                if len(self.urls) < self.config.get_num_articles() and \
-                        (url := self._extract_url(link)) and url not in self.urls \
-                        and url.startswith('https://www.nn.ru/text') and url.count('/') == 9:
+            for link in BeautifulSoup(response.content, 'lxml').find_all('a', href=True):
+                url = self._extract_url(link)
+                if url and re.match(r'^https://74.ru/text/(?!longread)', url) and url not in self.urls \
+                        and url.count('/') == 9 and len(self.urls) < self.config.get_num_articles():
                     self.urls.append(url)
 
     def get_search_urls(self) -> list:
@@ -259,20 +255,8 @@ class HTMLParser:
         """
         Finds text of article
         """
-        # implementation for zebra-tv.ru website
-        # self.article.title = article_soup.find('h1', {'class': 'new-title'}).text
-        # preview = article_soup.find('div', {'class': 'preview-text'}).text.strip()
-        # body_bs = article_soup.find('div', {'class': 'detail'})
-        # paragraphs_lst = []
-        # for tag in body_bs.select('p, div.quote'):
-        #     if tag.name == 'p' and len(tag.attrs) != 0:
-        #         continue
-        #     paragraphs_lst.append(tag.text.strip())
-        # paragraphs = ' '.join(paragraphs_lst)
-        # self.article.text = '. '.join((preview, paragraphs))
-
-        # implementation for nn.ru website
         self.article.title = article_soup.find('h1', itemprop='headline').text
+
         preview = article_soup.find('p', itemprop='alternativeHeadline').text
         paragraphs_lst = [par.text.strip() for par in
                           article_soup.find('div', itemprop='articleBody')
@@ -284,36 +268,21 @@ class HTMLParser:
         """
         Finds meta information of article
         """
-        # # implementation for zebra-tv.ru website
-        # author = article_soup.find('span', itemprop='author')
-        # if author:
-        #     self.article.author.extend(author.text.split(', '))
-        # else:
-        #     self.article.author.append('NOT FOUND')
-        #
-        # article_date = article_soup.find('meta', itemprop='datePublished').get('content')
-        # article_time = article_soup.find('span', {'class': 'date'}).text[-6:]
-        # if article_date and article_time:
-        #     self.article.date = self.unify_date_format(str(article_date) + article_time)
-
-        # implementation for nn.ru website
         author = article_soup.find('p', itemprop='name')
         self.article.author = [author.text] if author else ['NOT FOUND']
-        date = article_soup.find('div', itemprop='datePublished').get('datetime')
+        date = article_soup.find('meta', itemprop='datePublished').get('content')[:-6]
         if date:
             self.article.date = self.unify_date_format(str(date))
+
         for link in article_soup.find_all('a', href=True):
             if link['href'].startswith('/text/tags/'):
-                self.article.topics.append(link['title'])
+                if tag := link.get('title'):
+                    self.article.topics.append(tag)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
         Unifies date format
         """
-        # implementation for zebra-tv.ru website
-        # return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M')
-
-        # implementation for nn.ru website
         return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
 
     def parse(self) -> Union[Article, bool, list]:
@@ -327,17 +296,21 @@ class HTMLParser:
         return self.article
 
 
-def prepare_environment(base_path: Union[Path, str], recursive: bool = False) -> None:
+def prepare_environment(base_path: Union[Path, str]) -> None:
     """
     Creates ASSETS_PATH folder if no created and removes existing folder
     """
-    if not recursive:
-        if base_path.exists():
-            shutil.rmtree(base_path)
-        base_path.mkdir(parents=True)
-    else:
-        if not base_path.exists():
-            base_path.mkdir(parents=True)
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True)
+
+def prepare_environment_recursive(base_path: Union[Path, str]) -> None:
+    """
+    Creates ASSETS_PATH folder if no created and removes existing folder
+    """
+    if base_path.exists():
+        shutil.rmtree(base_path)
+    base_path.mkdir(parents=True)
 
 
 class CrawlerRecursive(Crawler):
@@ -346,31 +319,26 @@ class CrawlerRecursive(Crawler):
     """
     def __init__(self, config: Config):
         super().__init__(config)
-        self.crawler_data_path = Path(__file__).parent / 'crawler_data.json'
+        self.crawler_data_path = Path(__file__).parent / 'build' / 'crawler_data.json'
         self.last_file_index = 0
         self.last_index = 0
-        self.start_url = config.get_seed_urls()[0]
-        self.urls = [self.start_url]
+        self.urls = [config.get_seed_urls()[0]]
         self.article_urls = []
+        self._load_crawler_data()
 
     def _save_crawler_data(self) -> None:
         """
         Saves start_url and collected urls
         from crawler into a json file
         """
-        crawler_data = {
-            'last_file_index': self.last_file_index,
-            'last_index': self.last_index,
-            'start_url': self.start_url,
-            'urls': self.urls,
-            'article_urls': self.article_urls
-                        }
+        crawler_data = {'last_file_index': self.last_file_index, 'last_index': self.last_index,
+                        'urls': self.urls, 'article_urls': self.article_urls}
         with open(self.crawler_data_path, 'w', encoding='utf-8') as f:
             json.dump(crawler_data, f, ensure_ascii=True, indent=4, separators=(', ', ': '))
 
-    def load_crawler_data(self) -> None:
+    def _load_crawler_data(self) -> None:
         """
-        Loads start_url and collected urls
+        Loads collected urls
         from a json file into crawler
         """
         if self.crawler_data_path.exists():
@@ -378,7 +346,6 @@ class CrawlerRecursive(Crawler):
                 crawler_data = json.load(f)
             self.last_file_index = crawler_data['last_file_index']
             self.last_index = crawler_data['last_index']
-            self.start_url = crawler_data['start_url']
             self.urls = crawler_data['urls']
             self.article_urls = crawler_data['article_urls']
 
@@ -397,27 +364,17 @@ class CrawlerRecursive(Crawler):
         """
         Finds articles
         """
-        if self.last_index != 0:
-            self.start_url = self.urls[self.last_index]
+        response = make_request(self.urls[self.last_index], self.config)
+        for link in BeautifulSoup(response.content, 'lxml').find_all('a', href=True):
+            url = self._extract_url(link)
 
-        try:
-            response = make_request(self.start_url, self.config)
-        except requests.exceptions.HTTPError:
-            pass
+            if url and url not in self.urls:
+                self.urls.append(url)
+                if re.match(r'^https://74.ru/text/(?!longread)', url) and url not in self.article_urls \
+                        and url.count('/') == 9 and len(self.article_urls) < self.config.get_num_articles():
+                    self.article_urls.append(url)
 
-        else:
-            for link in BeautifulSoup(response.content, 'lxml').find_all('a'):
-                url = self._extract_url(link)
-
-                if url and url not in self.urls:
-                    if url.count('/') == 9 and url.startswith('https://www.nn.ru/text/') and \
-                            len(self.article_urls) < self.config.get_num_articles() and \
-                            not url.startswith('https://www.nn.ru/text/longread/') and \
-                            url not in self.article_urls:
-                        self.article_urls.append(url)
-                    self.urls.append(url)
-                    self._save_crawler_data()
-
+                self._save_crawler_data()
         self.last_index += 1
         self._save_crawler_data()
         while len(self.urls) < self.config.get_num_articles():
@@ -446,9 +403,8 @@ def main_recursive() -> None:
     Entrypoint for scrapper module using recursive crawler
     """
     configuration = Config(path_to_config=CRAWLER_CONFIG_PATH)
-    prepare_environment(ASSETS_PATH, recursive=True)
+    prepare_environment_recursive(ASSETS_PATH)
     recursive_crawler = CrawlerRecursive(config=configuration)
-    recursive_crawler.load_crawler_data()
     recursive_crawler.find_articles()
 
     for idx in range(recursive_crawler.last_file_index, len(recursive_crawler.article_urls)):
