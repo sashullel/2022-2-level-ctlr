@@ -50,8 +50,8 @@ class CorpusManager:
         if not self._path_to_raw_txt_data.is_dir():
             raise NotADirectoryError('path does not lead to directory')
 
-        meta_files = [file for file in self._path_to_raw_txt_data.glob('*.json')]
-        raw_files = [file for file in self._path_to_raw_txt_data.glob('*.txt')]
+        meta_files = [file for file in self._path_to_raw_txt_data.glob('*_meta.json')]
+        raw_files = [file for file in self._path_to_raw_txt_data.glob('*_raw.txt')]
         if not (meta_files and raw_files):
             raise EmptyDirectoryError('directory is empty')
 
@@ -68,7 +68,7 @@ class CorpusManager:
         """
         Register each dataset entry
         """
-        for file in self._path_to_raw_txt_data.glob('*.txt'):
+        for file in self._path_to_raw_txt_data.glob('*_raw.txt'):
             article = from_raw(file)
             self._storage.update({article.article_id: article})
 
@@ -88,6 +88,9 @@ class MorphologicalTokenDTO:
         """
         Initializes MorphologicalTokenDTO
         """
+        self.lemma = lemma
+        self.pos = pos
+        self.tags = tags
 
 
 class ConlluToken:
@@ -95,26 +98,41 @@ class ConlluToken:
     Representation of the CONLL-U Token
     """
 
-    def __init__(self, text: str):
+    def __init__(self, text: str, parameters: MorphologicalTokenDTO, position: int):
         """
         Initializes ConlluToken
         """
         self._text = text
+        self._morphological_parameters = parameters
+        self.position = position
 
     def set_morphological_parameters(self, parameters: MorphologicalTokenDTO) -> None:
         """
         Stores the morphological parameters
         """
+        self._morphological_parameters = parameters
+
 
     def get_morphological_parameters(self) -> MorphologicalTokenDTO:
         """
         Returns morphological parameters from ConlluToken
         """
+        return self._morphological_parameters
 
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
         String representation of the token for conllu files
         """
+        xpos = '_'
+        feats = '_'
+        head = 0
+        deprel = 'root'
+        deps = '_'
+        misc = '_'
+
+        return '\t'.join((self.position, self._text, self._morphological_parameters.lemma,
+                  self._morphological_parameters.pos, xpos, feats, head, deprel, deps, misc))
+
 
     def get_cleaned(self) -> str:
         """
@@ -137,6 +155,10 @@ class ConlluSentence(SentenceProtocol):
         self._text = text
         self._tokens = tokens
 
+    def _format_tokens(self, include_morphological_tags: bool) -> str:
+        pass
+
+
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
         Creates string representation of the sentence
@@ -146,6 +168,7 @@ class ConlluSentence(SentenceProtocol):
         """
         Returns the lowercase representation of the sentence
         """
+        return ' '.join([ConlluToken(word).get_cleaned() for word in self._text.split()])
 
     def get_tokens(self) -> list[ConlluToken]:
         """
@@ -207,9 +230,10 @@ class MorphologicalAnalysisPipeline:
         """
         Performs basic preprocessing and writes processed text to files
         """
-        for key, val in self._corpus.get_articles():
+        for key, val in self._corpus.get_articles().items():
             article = from_raw(val.get_raw_text_path(), val)
-            article.set_conllu_sentences(self._process(article.get_raw_text()))
+            sentences = self._process(article.get_raw_text())
+            article.set_conllu_sentences(sentences)
             to_cleaned(article)
 
 
@@ -240,9 +264,8 @@ def main() -> None:
     Entrypoint for pipeline module
     """
     corpus_manager = CorpusManager(ASSETS_PATH)
-    storage = corpus_manager.get_articles()
-    for idx, article in storage.items():
-        pass
+    morph_analysis_pipeline = MorphologicalAnalysisPipeline(corpus_manager)
+    morph_analysis_pipeline.run()
 
 
 if __name__ == "__main__":
