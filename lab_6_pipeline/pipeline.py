@@ -1,16 +1,19 @@
 """
 Pipeline for CONLL-U formatting
 """
+import string
 from pathlib import Path
 from typing import List
 
+from pymystem3 import Mystem
+
 from core_utils.article.article import (Article, get_article_id_from_filepath,
                                         SentenceProtocol, split_by_sentence)
-from core_utils.article.io import from_raw, to_cleaned
+from core_utils.article.io import from_raw, to_conllu, to_cleaned
 from core_utils.article.ud import OpencorporaTagProtocol, TagConverter
 from core_utils.constants import ASSETS_PATH
 
-from string import punctuation
+import re
 
 # pylint: disable=too-few-public-methods
 
@@ -64,13 +67,18 @@ class CorpusManager:
         if meta_files_idx != correct_range != raw_files_idx:
             raise InconsistentDatasetError('files are laid out in an inconsistent way')
 
+        for file in meta_files + raw_files:
+            with open(file, 'r', encoding='utf-8') as f:
+                if not f.read():
+                    raise InconsistentDatasetError('there is an empty file')
+
     def _scan_dataset(self) -> None:
         """
         Register each dataset entry
         """
-        for file in self._path_to_raw_txt_data.glob('*_raw.txt'):
-            article = from_raw(file)
-            self._storage.update({article.article_id: article})
+        for file_path in self._path_to_raw_txt_data.glob('*_raw.txt'):
+            article = from_raw(file_path)
+            self._storage[article.article_id] = article
 
     def get_articles(self) -> dict:
         """
@@ -98,13 +106,13 @@ class ConlluToken:
     Representation of the CONLL-U Token
     """
 
-    def __init__(self, text: str, parameters: MorphologicalTokenDTO, position: int):
+    def __init__(self, text: str):
         """
         Initializes ConlluToken
         """
         self._text = text
-        self._morphological_parameters = parameters
-        self.position = position
+        self._morphological_parameters = MorphologicalTokenDTO()
+        self._position = 0
 
     def set_morphological_parameters(self, parameters: MorphologicalTokenDTO) -> None:
         """
@@ -112,34 +120,44 @@ class ConlluToken:
         """
         self._morphological_parameters = parameters
 
-
     def get_morphological_parameters(self) -> MorphologicalTokenDTO:
         """
         Returns morphological parameters from ConlluToken
         """
         return self._morphological_parameters
 
+    def set_position(self, position: int) -> None:
+        """
+        Stores the morphological parameters
+        """
+        self._position = position
+
+    def get_position(self) -> int:
+        """
+        Returns morphological parameters from ConlluToken
+        """
+        return self._position
+
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
         String representation of the token for conllu files
         """
+        position = str(self._position)
         xpos = '_'
-        feats = '_'
-        head = 0
+        feats = tags if include_morphological_tags and (tags := self._morphological_parameters.tags) else '_'
+        head = '0'
         deprel = 'root'
         deps = '_'
         misc = '_'
 
-        return '\t'.join((self.position, self._text, self._morphological_parameters.lemma,
-                  self._morphological_parameters.pos, xpos, feats, head, deprel, deps, misc))
-
+        return '\t'.join((position, self._text, self._morphological_parameters.lemma,
+                          self._morphological_parameters.pos, xpos, feats, head, deprel, deps, misc))
 
     def get_cleaned(self) -> str:
         """
         Returns lowercase original form of a token
         """
-        punc_to_remove = punctuation + '–—«»'
-        return self._text.translate(self._text.maketrans('', '', punc_to_remove)).lower()
+        return re.sub(r'[^\w\s]', '', self._text).lower()
 
 
 class ConlluSentence(SentenceProtocol):
@@ -156,19 +174,25 @@ class ConlluSentence(SentenceProtocol):
         self._tokens = tokens
 
     def _format_tokens(self, include_morphological_tags: bool) -> str:
-        pass
-
+        """
+        Formats tokens per newline
+        """
+        if include_morphological_tags:
+            return '\n'.join((token.get_conllu_text(include_morphological_tags) for token in self._tokens))
 
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
         Creates string representation of the sentence
         """
+        return (f'# sent_id = {self._position}\n'
+                f'# text = {self._text}\n' +
+                self._format_tokens(include_morphological_tags))
 
     def get_cleaned_sentence(self) -> str:
         """
         Returns the lowercase representation of the sentence
         """
-        return ' '.join([ConlluToken(word).get_cleaned() for word in self._text.split()])
+        return ' '.join((token.get_cleaned() for token in self._tokens))
 
     def get_tokens(self) -> list[ConlluToken]:
         """
@@ -224,17 +248,51 @@ class MorphologicalAnalysisPipeline:
         """
         Returns the text representation as the list of ConlluSentence
         """
-        return [ConlluSentence(idx, sentence, []) for idx, sentence in enumerate(split_by_sentence(text))]
+        conllu_sentences = []
+        mystem = Mystem()
+        sentences = split_by_sentence(text)
+        for sent_idx, sentence in enumerate(sentences):
+            print(sentence)
+            conllu_tokens = []
+            tokens = [token for token in mystem.analyze(sentence) if
+                      token['text'].strip() and token['text'] not in string.punctuation.replace('.', '')]
+            for token_idx, token_info in enumerate(tokens):
+                token_text = token_info['text']
+                print(token_text)
+                token = ConlluToken(token_text)
+                token.set_position(token_idx)
+
+                if token_info.get('analysis'):
+                    lemma = token_info['analysis'][0]['lex']
+                    pos = re.match('^[^,|=]*', token_info['analysis'][0]['gr']).group(0)
+                    tags = token_info['analysis'][0]['gr']
+                    parameters = MorphologicalTokenDTO(lemma=lemma, pos=pos, tags=tags)
+                else:
+                    if token_text == '.':
+                        pos = 'PUNCT'
+                    elif token_text.isdigit():
+                        pos = 'NUM'
+                    else:
+                        pos = 'X'
+                    parameters = MorphologicalTokenDTO(lemma=token_text, pos=pos)
+                print(token.get_conllu_text(False))
+                token.set_morphological_parameters(parameters)
+                conllu_tokens.append(token)
+            conllu_sentences.append(ConlluSentence(position=sent_idx,
+                                                   text=sentence,
+                                                   tokens=conllu_tokens))
+
+        return conllu_sentences
 
     def run(self) -> None:
         """
         Performs basic preprocessing and writes processed text to files
         """
-        for key, val in self._corpus.get_articles().items():
+        for val in self._corpus.get_articles().values():
             article = from_raw(val.get_raw_text_path(), val)
-            sentences = self._process(article.get_raw_text())
-            article.set_conllu_sentences(sentences)
+            article.set_conllu_sentences(self._process(article.get_raw_text()))
             to_cleaned(article)
+            to_conllu(article, include_morphological_tags=True, include_pymorphy_tags=False)
 
 
 class AdvancedMorphologicalAnalysisPipeline(MorphologicalAnalysisPipeline):
