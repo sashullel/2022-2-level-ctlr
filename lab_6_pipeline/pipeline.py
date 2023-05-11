@@ -15,7 +15,6 @@ from core_utils.constants import ASSETS_PATH
 
 import json
 import os
-import pymorphy2
 import re
 
 # pylint: disable=too-few-public-methods
