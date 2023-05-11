@@ -211,7 +211,7 @@ class Crawler:
         if url.startswith('/text/'):
             return 'https://74.ru' + str(url)
         if url.startswith('https://74.ru'):
-            return url
+            return str(url)
         return ''
 
     def find_articles(self) -> None:
@@ -271,9 +271,9 @@ class HTMLParser:
         """
         author = article_soup.find('p', itemprop='name')
         self.article.author = [author.text] if author else ['NOT FOUND']
-        date = article_soup.find('meta', itemprop='datePublished').get('content')[:-6]
+        date = article_soup.find('meta', itemprop='datePublished').get('content')
         if date:
-            self.article.date = self.unify_date_format(str(date))
+            self.article.date = self.unify_date_format(str(date[:-6]))
 
         for link in article_soup.find_all('a', href=True):
             if link['href'].startswith('/text/tags/'):
