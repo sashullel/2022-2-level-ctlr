@@ -226,8 +226,9 @@ class Crawler:
 
             for link in BeautifulSoup(response.content, 'lxml').find_all('a', href=True):
                 url = self._extract_url(link)
-                if url and re.match(r'^https://74.ru/text/(?!longread)', url) and url not in self.urls \
-                        and url.count('/') == 9 and len(self.urls) < self.config.get_num_articles():
+                if url and re.match(r'^https://74.ru/text/(?!longread)', url) and\
+                        url not in self.urls and url.count('/') == 9 and \
+                        len(self.urls) < self.config.get_num_articles():
                     self.urls.append(url)
 
     def get_search_urls(self) -> list:
@@ -370,8 +371,9 @@ class CrawlerRecursive(Crawler):
 
             if url and url not in self.urls:
                 self.urls.append(url)
-                if re.match(r'^https://74.ru/text/(?!longread)', url) and url not in self.article_urls \
-                        and url.count('/') == 9 and len(self.article_urls) < self.config.get_num_articles():
+                if re.match(r'^https://74.ru/text/(?!longread)', url) and \
+                        url not in self.article_urls and url.count('/') == 9 and \
+                        len(self.article_urls) < self.config.get_num_articles():
                     self.article_urls.append(url)
 
                 self._save_crawler_data()

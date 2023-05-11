@@ -225,11 +225,11 @@ class MystemTagConverter(TagConverter):
             mapping_info = json.load(f)
 
         ud_tags = []
-        cats = {'VERB': ['Tense', 'Number', 'Gender'],
-                'NOUN': ['Animacy', 'Case', 'Gender', 'Number'],
+        cats = {'NOUN': ['Case', 'Number', 'Gender', 'Animacy'],
+                'PRON': ['Case', 'Number', 'Gender', 'Animacy'],
                 'ADJ': ['Case', 'Number', 'Gender'],
-                'PRON': ['Number', 'Gender', 'Case'],
-                'NUM': ['Case', 'Animacy']}
+                'NUM': ['Case', 'Number', 'Animacy'],
+                'VERB': ['Tense', 'Number', 'Gender']}
 
         ud_pos = self.convert_pos(tags)
         for tag in actual_tags:
@@ -287,8 +287,8 @@ class MorphologicalAnalysisPipeline:
         sentences = split_by_sentence(text)
         for sent_idx, sentence in enumerate(sentences):
             conllu_tokens = []
-            tokens = [token for token in self._mystem.analyze(sentence) if
-                      token['text'].strip() and token['text'] not in string.punctuation.replace('.', '')]
+            tokens = [token for token in self._mystem.analyze(sentence) if token['text'].strip() and
+                      token['text'] not in string.punctuation.replace('.', '')]
             for token_idx, token_info in enumerate(tokens):
                 token_text = token_info['text']
                 token = ConlluToken(token_text)
