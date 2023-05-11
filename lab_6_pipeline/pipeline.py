@@ -13,6 +13,9 @@ from core_utils.article.io import from_raw, to_conllu, to_cleaned
 from core_utils.article.ud import OpencorporaTagProtocol, TagConverter
 from core_utils.constants import ASSETS_PATH
 
+import json
+import os
+import pymorphy2
 import re
 
 # pylint: disable=too-few-public-methods
@@ -68,9 +71,8 @@ class CorpusManager:
             raise InconsistentDatasetError('files are laid out in an inconsistent way')
 
         for file in meta_files + raw_files:
-            with open(file, 'r', encoding='utf-8') as f:
-                if not f.read():
-                    raise InconsistentDatasetError('there is an empty file')
+            if os.stat(file).st_size == 0:
+                raise InconsistentDatasetError('there is an empty file')
 
     def _scan_dataset(self) -> None:
         """
@@ -177,22 +179,21 @@ class ConlluSentence(SentenceProtocol):
         """
         Formats tokens per newline
         """
-        if include_morphological_tags:
-            return '\n'.join((token.get_conllu_text(include_morphological_tags) for token in self._tokens))
+        return '\n'.join((token.get_conllu_text(include_morphological_tags) for token in self._tokens))
 
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
         Creates string representation of the sentence
         """
-        return (f'# sent_id = {self._position}\n'
-                f'# text = {self._text}\n' +
-                self._format_tokens(include_morphological_tags))
+        return ''.join((f'# sent_id = {self._position}\n'
+                        f'# text = {self._text}\n',
+                        self._format_tokens(include_morphological_tags)))
 
     def get_cleaned_sentence(self) -> str:
         """
         Returns the lowercase representation of the sentence
         """
-        return ' '.join((token.get_cleaned() for token in self._tokens))
+        return ' '.join(token.get_cleaned() for token in self.get_tokens() if token.get_cleaned())
 
     def get_tokens(self) -> list[ConlluToken]:
         """
@@ -205,16 +206,48 @@ class MystemTagConverter(TagConverter):
     """
     Mystem Tag Converter
     """
+    def __init__(self, path: Path):
+        self._path = path
 
     def convert_morphological_tags(self, tags: str) -> str:  # type: ignore
         """
         Converts the Mystem tags into the UD format
         """
+        if re.match('^[^,|=]*', tags).group(0) in \
+                ('PART', 'PR', 'INTJ', 'CONJ', 'COM', 'ADVPRO', 'ADV'):
+            return ''
+
+        actual_tags = []
+        for tag in re.findall("[^()]+", tags):
+            actual_tag = re.split(r',|=', tag.split('|')[0])
+            actual_tags.extend(filter(None, actual_tag))
+
+        with open(self._path, 'r', encoding='utf-8') as f:
+            mapping_info = json.load(f)
+
+        ud_tags = []
+        cats = {'VERB': ['Tense', 'Number', 'Gender'],
+                'NOUN': ['Animacy', 'Case', 'Gender', 'Number'],
+                'ADJ': ['Case', 'Number', 'Gender'],
+                'PRON': ['Number', 'Gender', 'Case'],
+                'NUM': ['Case', 'Animacy']}
+
+        ud_pos = self.convert_pos(tags)
+        for tag in actual_tags:
+            for cat in cats.get(ud_pos):
+                if ud_tag := mapping_info[cat].get(tag):
+                    ud_tags.append(f'{cat}={ud_tag}')
+        return '|'.join(ud_tags)
+
 
     def convert_pos(self, tags: str) -> str:  # type: ignore
         """
         Extracts and converts the POS from the Mystem tags into the UD format
         """
+        pos = re.match('^[^,|=]*', tags).group(0)
+        with open(self._path, 'r', encoding='utf-8') as f:
+            mapping_info = json.load(f)
+            return mapping_info['POS'][pos]
 
 
 class OpenCorporaTagConverter(TagConverter):
@@ -243,29 +276,30 @@ class MorphologicalAnalysisPipeline:
         Initializes MorphologicalAnalysisPipeline
         """
         self._corpus = corpus_manager
+        self._mystem = Mystem()
+        self._path = Path(__file__).parent / 'data' / 'mystem_tags_mapping.json'
+        self._tag_converter = MystemTagConverter(self._path)
 
     def _process(self, text: str) -> List[ConlluSentence]:
         """
         Returns the text representation as the list of ConlluSentence
         """
         conllu_sentences = []
-        mystem = Mystem()
         sentences = split_by_sentence(text)
         for sent_idx, sentence in enumerate(sentences):
-            print(sentence)
             conllu_tokens = []
-            tokens = [token for token in mystem.analyze(sentence) if
+            tokens = [token for token in self._mystem.analyze(sentence) if
                       token['text'].strip() and token['text'] not in string.punctuation.replace('.', '')]
             for token_idx, token_info in enumerate(tokens):
                 token_text = token_info['text']
-                print(token_text)
                 token = ConlluToken(token_text)
                 token.set_position(token_idx)
 
                 if token_info.get('analysis'):
                     lemma = token_info['analysis'][0]['lex']
-                    pos = re.match('^[^,|=]*', token_info['analysis'][0]['gr']).group(0)
-                    tags = token_info['analysis'][0]['gr']
+                    grammar_info = token_info['analysis'][0]['gr']
+                    pos = self._tag_converter.convert_pos(grammar_info)
+                    tags = self._tag_converter.convert_morphological_tags(grammar_info)
                     parameters = MorphologicalTokenDTO(lemma=lemma, pos=pos, tags=tags)
                 else:
                     if token_text == '.':
@@ -275,7 +309,6 @@ class MorphologicalAnalysisPipeline:
                     else:
                         pos = 'X'
                     parameters = MorphologicalTokenDTO(lemma=token_text, pos=pos)
-                print(token.get_conllu_text(False))
                 token.set_morphological_parameters(parameters)
                 conllu_tokens.append(token)
             conllu_sentences.append(ConlluSentence(position=sent_idx,
@@ -292,6 +325,7 @@ class MorphologicalAnalysisPipeline:
             article = from_raw(val.get_raw_text_path(), val)
             article.set_conllu_sentences(self._process(article.get_raw_text()))
             to_cleaned(article)
+            to_conllu(article, include_morphological_tags=False, include_pymorphy_tags=False)
             to_conllu(article, include_morphological_tags=True, include_pymorphy_tags=False)
 
 
