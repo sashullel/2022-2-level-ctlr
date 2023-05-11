@@ -1,7 +1,6 @@
 """
 Pipeline for CONLL-U formatting
 """
-import string
 from pathlib import Path
 from typing import List
 
@@ -113,7 +112,7 @@ class ConlluToken:
         """
         self._text = text
         self._morphological_parameters = MorphologicalTokenDTO()
-        self._position = 0
+        self._position = 1
 
     def set_morphological_parameters(self, parameters: MorphologicalTokenDTO) -> None:
         """
@@ -184,9 +183,9 @@ class ConlluSentence(SentenceProtocol):
         """
         Creates string representation of the sentence
         """
-        return ''.join((f'# sent_id = {self._position}\n'
-                        f'# text = {self._text}\n',
-                        self._format_tokens(include_morphological_tags)))
+        return f'# sent_id = {self._position}\n' \
+               f'# text = {self._text}\n' \
+               f' {self._format_tokens(include_morphological_tags)}\n'
 
     def get_cleaned_sentence(self) -> str:
         """
@@ -206,7 +205,8 @@ class MystemTagConverter(TagConverter):
     Mystem Tag Converter
     """
     def __init__(self, path: Path):
-        self._path = path
+        with open(path, 'r', encoding='utf-8') as f:
+            self._mapping_info = json.load(f)
 
     def convert_morphological_tags(self, tags: str) -> str:  # type: ignore
         """
@@ -221,9 +221,6 @@ class MystemTagConverter(TagConverter):
             actual_tag = re.split(r',|=', tag.split('|')[0])
             actual_tags.extend(filter(None, actual_tag))
 
-        with open(self._path, 'r', encoding='utf-8') as f:
-            mapping_info = json.load(f)
-
         ud_tags = []
         cats = {'NOUN': ['Case', 'Number', 'Gender', 'Animacy'],
                 'PRON': ['Case', 'Number', 'Gender', 'Animacy'],
@@ -234,7 +231,7 @@ class MystemTagConverter(TagConverter):
         ud_pos = self.convert_pos(tags)
         for tag in actual_tags:
             for cat in cats.get(ud_pos):
-                if ud_tag := mapping_info[cat].get(tag):
+                if ud_tag := self._mapping_info[cat].get(tag):
                     ud_tags.append(f'{cat}={ud_tag}')
         return '|'.join(ud_tags)
 
@@ -244,9 +241,7 @@ class MystemTagConverter(TagConverter):
         Extracts and converts the POS from the Mystem tags into the UD format
         """
         pos = re.match('^[^,|=]*', tags).group(0)
-        with open(self._path, 'r', encoding='utf-8') as f:
-            mapping_info = json.load(f)
-            return mapping_info['POS'][pos]
+        return self._mapping_info['POS'][pos]
 
 
 class OpenCorporaTagConverter(TagConverter):
@@ -287,13 +282,13 @@ class MorphologicalAnalysisPipeline:
         sentences = split_by_sentence(text)
         for sent_idx, sentence in enumerate(sentences):
             conllu_tokens = []
-            tokens = [token for token in self._mystem.analyze(sentence) if token['text'].strip() and
-                      token['text'] not in string.punctuation.replace('.', '')]
+            tokens = [token for token in self._mystem.analyze(re.sub(r'[^.\w\s]', '', sentence))
+                      if token['text'].strip()]
+
             for token_idx, token_info in enumerate(tokens):
                 token_text = token_info['text']
-                token = ConlluToken(token_text)
-                token.set_position(token_idx)
-
+                conllu_token = ConlluToken(token_text)
+                conllu_token.set_position(token_idx + 1)
                 if token_info.get('analysis'):
                     lemma = token_info['analysis'][0]['lex']
                     grammar_info = token_info['analysis'][0]['gr']
@@ -301,15 +296,16 @@ class MorphologicalAnalysisPipeline:
                     tags = self._tag_converter.convert_morphological_tags(grammar_info)
                     parameters = MorphologicalTokenDTO(lemma=lemma, pos=pos, tags=tags)
                 else:
-                    if token_text == '.':
+                    if token_text.strip() == '.':
                         pos = 'PUNCT'
                     elif token_text.isdigit():
                         pos = 'NUM'
                     else:
                         pos = 'X'
                     parameters = MorphologicalTokenDTO(lemma=token_text, pos=pos)
-                token.set_morphological_parameters(parameters)
-                conllu_tokens.append(token)
+
+                conllu_token.set_morphological_parameters(parameters)
+                conllu_tokens.append(conllu_token)
             conllu_sentences.append(ConlluSentence(position=sent_idx,
                                                    text=sentence,
                                                    tokens=conllu_tokens))
