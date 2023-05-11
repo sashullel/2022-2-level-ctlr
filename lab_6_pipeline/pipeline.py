@@ -177,7 +177,7 @@ class ConlluSentence(SentenceProtocol):
         """
         Formats tokens per newline
         """
-        return '\n'.join((token.get_conllu_text(include_morphological_tags) for token in self._tokens))
+        return '\n'.join(token.get_conllu_text(include_morphological_tags) for token in self._tokens)
 
     def get_conllu_text(self, include_morphological_tags: bool) -> str:
         """
@@ -185,7 +185,7 @@ class ConlluSentence(SentenceProtocol):
         """
         return f'# sent_id = {self._position}\n' \
                f'# text = {self._text}\n' \
-               f' {self._format_tokens(include_morphological_tags)}\n'
+               f'{self._format_tokens(include_morphological_tags)}\n'
 
     def get_cleaned_sentence(self) -> str:
         """
@@ -222,9 +222,9 @@ class MystemTagConverter(TagConverter):
             actual_tags.extend(filter(None, actual_tag))
 
         ud_tags = []
-        cats = {'NOUN': ['Case', 'Number', 'Gender', 'Animacy'],
-                'PRON': ['Case', 'Number', 'Gender', 'Animacy'],
-                'ADJ': ['Case', 'Number', 'Gender'],
+        cats = {'NOUN': ['Animacy', 'Case', 'Gender', 'Number'],
+                'PRON': ['Animacy', 'Case', 'Gender', 'Number'],
+                'ADJ': ['Case', 'Gender', 'Number'],
                 'NUM': ['Case', 'Number', 'Animacy'],
                 'VERB': ['Tense', 'Number', 'Gender']}
 
@@ -233,7 +233,7 @@ class MystemTagConverter(TagConverter):
             for cat in cats.get(ud_pos):
                 if ud_tag := self._mapping_info[cat].get(tag):
                     ud_tags.append(f'{cat}={ud_tag}')
-        return '|'.join(ud_tags)
+        return '|'.join(sorted(ud_tags))
 
 
     def convert_pos(self, tags: str) -> str:  # type: ignore

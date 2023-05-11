@@ -6,7 +6,7 @@
     "ANUM":	"ADJ",
     "APRO":	"ADJ",
     "COM":	"ADJ",
-    "CONJ":	"CONJ",
+    "CONJ":	"CCONJ",
     "INTJ":	"INTJ",
     "NUM":	"NUM",
     "PART":	"PART",
