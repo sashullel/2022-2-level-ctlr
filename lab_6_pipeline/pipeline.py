@@ -321,8 +321,7 @@ class MorphologicalAnalysisPipeline:
         """
         Performs basic preprocessing and writes processed text to files
         """
-        for val in self._corpus.get_articles().values():
-            article = from_raw(val.get_raw_text_path(), val)
+        for article in self._corpus.get_articles().values():
             article.set_conllu_sentences(self._process(article.get_raw_text()))
             to_cleaned(article)
             to_conllu(article, include_morphological_tags=False, include_pymorphy_tags=False)
