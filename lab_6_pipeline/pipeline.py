@@ -235,7 +235,6 @@ class MystemTagConverter(TagConverter):
                     ud_tags.append(f'{cat}={ud_tag}')
         return '|'.join(sorted(ud_tags))
 
-
     def convert_pos(self, tags: str) -> str:  # type: ignore
         """
         Extracts and converts the POS from the Mystem tags into the UD format
@@ -282,7 +281,8 @@ class MorphologicalAnalysisPipeline:
         sentences = split_by_sentence(text)
         for sent_idx, sentence in enumerate(sentences):
             conllu_tokens = []
-            tokens = [token for token in self._mystem.analyze(re.sub(r'[^.\w\s]', '', sentence))
+            clean_sentence = re.sub(r'\s{2,}', ' ', re.sub(r'[^.\w\s]', '', sentence))
+            tokens = [token for token in self._mystem.analyze(clean_sentence)
                       if token['text'].strip()]
 
             for token_idx, token_info in enumerate(tokens):
