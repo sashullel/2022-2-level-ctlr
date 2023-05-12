@@ -286,7 +286,7 @@ class MorphologicalAnalysisPipeline:
                       if token['text'].strip()]
 
             for token_idx, token_info in enumerate(tokens):
-                token_text = token_info['text']
+                token_text = token_info['text'].strip()
                 conllu_token = ConlluToken(token_text)
                 conllu_token.set_position(token_idx + 1)
                 if token_info.get('analysis'):
@@ -296,7 +296,7 @@ class MorphologicalAnalysisPipeline:
                     tags = self._tag_converter.convert_morphological_tags(grammar_info)
                     parameters = MorphologicalTokenDTO(lemma=lemma.strip(), pos=pos, tags=tags)
                 else:
-                    if token_text.strip() == '.':
+                    if token_text == '.':
                         pos = 'PUNCT'
                     elif token_text.isdigit():
                         pos = 'NUM'
