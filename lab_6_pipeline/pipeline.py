@@ -213,7 +213,7 @@ class MystemTagConverter(TagConverter):
                 'NUM': [self.animacy, self.case, self.number],
                 'VERB': [self.tense, self.gender, self.number]}
 
-        if ud_pos := self.convert_pos(tags) not in cats:
+        if (ud_pos := self.convert_pos(tags)).strip() not in cats:
             return ''
 
         actual_tags = []
