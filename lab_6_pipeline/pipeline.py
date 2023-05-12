@@ -294,7 +294,7 @@ class MorphologicalAnalysisPipeline:
                     grammar_info = token_info['analysis'][0]['gr']
                     pos = self._tag_converter.convert_pos(grammar_info)
                     tags = self._tag_converter.convert_morphological_tags(grammar_info)
-                    parameters = MorphologicalTokenDTO(lemma=lemma, pos=pos, tags=tags)
+                    parameters = MorphologicalTokenDTO(lemma=lemma.strip(), pos=pos, tags=tags)
                 else:
                     if token_text.strip() == '.':
                         pos = 'PUNCT'
@@ -302,7 +302,7 @@ class MorphologicalAnalysisPipeline:
                         pos = 'NUM'
                     else:
                         pos = 'X'
-                    parameters = MorphologicalTokenDTO(lemma=token_text, pos=pos)
+                    parameters = MorphologicalTokenDTO(lemma=token_text.strip(), pos=pos)
 
                 conllu_token.set_morphological_parameters(parameters)
                 conllu_tokens.append(conllu_token)
