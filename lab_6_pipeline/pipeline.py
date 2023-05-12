@@ -299,9 +299,9 @@ class MorphologicalAnalysisPipeline:
 
                     conllu_token.set_morphological_parameters(parameters)
                     conllu_tokens.append(conllu_token)
-                conllu_sentences.append(ConlluSentence(position=sent_idx,
-                                                       text=sentence,
-                                                       tokens=conllu_tokens))
+            conllu_sentences.append(ConlluSentence(position=sent_idx,
+                                                   text=sentence,
+                                                   tokens=conllu_tokens))
 
         return conllu_sentences
 
