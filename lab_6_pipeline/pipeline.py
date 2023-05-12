@@ -281,8 +281,7 @@ class MorphologicalAnalysisPipeline:
         sentences = split_by_sentence(text)
         for sent_idx, sentence in enumerate(sentences):
             conllu_tokens = []
-            clean_sentence = re.sub(r'\s{2,}', ' ', re.sub(r'[^.\w\s]', '', sentence))
-            tokens = [token for token in self._mystem.analyze(clean_sentence)
+            tokens = [token for token in self._mystem.analyze(re.sub(r'[^.\w\s]', '', sentence))
                       if token['text'].strip()]
 
             for token_idx, token_info in enumerate(tokens):
